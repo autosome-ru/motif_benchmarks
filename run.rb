@@ -24,21 +24,11 @@ config = JSON.parse(File.read(config_fn))
 
 control_fn = '/data/control.formatted.mfa' # control should be formatted FASTA (i.e. with seq length specified in header line)
 pwm_fn = 'motif.pwm'
-mode = 'mono'
 File.write(pwm_fn, config['motif'])
 
-case mode
-when 'mono'
-  motif_length = read_matrix(pwm_fn, num_columns: 4)[:matrix].length
-  ape_class = 'ru.autosome.ape.PrecalculateThresholds'
-  sarus_class = 'ru.autosome.SARUS'
-when 'di'
-  motif_length = read_matrix(pwm_fn, num_columns: 16)[:matrix].length + 1
-  ape_class = 'ru.autosome.ape.di.PrecalculateThresholds'
-  sarus_class = 'ru.autosome.di.SARUS'
-else
-  raise 'Mode must be `mono` or `di`'
-end
+motif_length = read_matrix(pwm_fn, num_columns: 4)[:matrix].length
+ape_class = 'ru.autosome.ape.PrecalculateThresholds'
+sarus_class = 'ru.autosome.SARUS'
 
 thresholds_fn = 'motif.thr'
 
