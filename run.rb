@@ -18,11 +18,11 @@ def read_matrix(fn, num_columns: 4)
   {name: name, matrix: matrix}
 end
 
-raise 'Specify config file' unless config_fn = ARGV[0]
-raise 'Specify results file' unless result_fn = ARGV[1]
+config_fn = "/workdir/config.json"
+result_fn = "/workdir/persistent/result.json"
 config = JSON.parse(File.read(config_fn))
 
-control_fn = '/data/control.formatted.mfa' # control should be formatted FASTA (i.e. with seq length specified in header line)
+control_fn = '/benchmark_specific_data/control.formatted.mfa' # control should be formatted FASTA (i.e. with seq length specified in header line)
 pwm_fn = 'motif.pwm'
 File.write(pwm_fn, config['motif'])
 

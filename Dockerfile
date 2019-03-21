@@ -6,4 +6,3 @@ RUN apk add --update openjdk8-jre && \
 WORKDIR /workdir/
 COPY .  /app/
 ENTRYPOINT ["ruby", "/app/run.rb"]
-CMD ["/workdir/config.json", "/workdir/persistent/result.json"]
