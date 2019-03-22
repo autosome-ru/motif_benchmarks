@@ -1,0 +1,43 @@
+# Directories and Files:
+ workDir=$HOME/www-ccg/weekly/
+ MGAdir=$HOME/db/mga/
+ pwmlibDir=$DATA/pwmlib
+ pwmFile=pwmfile_32055_35623
+ pwmevalFile=pwmeval_hg19_32055_35623
+
+# Matrix conversion:
+
+ FORMAT: LPM
+
+# Command pipeline:
+
+ - Extract positive and nagative sets of sequences:
+  sort -k2,2nr $MGAdir/hg19/remap/ENCSR000EAI.RELA.GM12891.narrowPeak.fps | sed -n 1,500p> $workDir/$pwmevalFile.fps;
+  EPDtoFA -l-124 -r125 < $workDir/$pwmevalFile.fps 2>/dev/null |perl -pe 's/EP /EP_/' > $workDir/motif_hg19_35623_pos.seq;
+  EPDtoFA -l301 -r550 < $workDir/$pwmevalFile.fps 2>/dev/null |perl -pe 's/EP /EP_/' > $workDir/motif_hg19_35623_neg.seq
+
+ - Compute binding scores on both positive and negative peak sequences:
+  pwm_scoring -r -u -m $workDir/pwmFile $workDir/motif_hg19_35623_pos.seq  > $workDir/motif_hg19_35623_pos_PWM.out;
+  pwm_scoring -r -u -m $workDir/ $workDir/motif_hg19_35623_neg.seq  > $workDir/motif_hg19_35623_neg_PWM.out
+
+ - R script to generate ROC curve and compute AUC value:
+  library(MASS)
+  library('caTools')
+  library('pROC')
+  pos <- as.matrix(read.table("$workDir/motif_hg19_35623_pos_PWM.out"))
+  neg <- as.matrix(read.table("$workDir/motif_hg19_35623_neg_PWM.out"))
+  W = wilcox.test(pos, neg, alternative ="g")$statistic
+  AUC = W/length(pos)/length(neg)
+  jpeg("$workDir/$pwmevalFile.jpg", width = 800, height = 800, quality = 100, pointsize=20)
+  pos_labs <- rep(1, 500)
+  neg_labs <- rep(0, 500)
+  pos <- cbind(pos, pos_labs)
+  neg <- cbind(neg, neg_labs)
+  comb_sets <- rbind(pos, neg)
+  plot(roc(comb_sets[, 2], comb_sets[, 1]), main="ROC curve of motif predictor", col = "red", lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
+  roc_auc <- roc(response = comb_sets[, 2], predictor = comb_sets[, 1])$auc
+  txt <- paste("AUC = ", roc_auc, sept="")
+  legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
+  write.table(roc_auc, col.names=F, row.names=T, file="$workDir/motif_hg19_35623_AUC.out", quote=F, sep="	")
+  dev.off()
+

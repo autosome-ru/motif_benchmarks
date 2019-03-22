@@ -1,0 +1,16 @@
+FROM ubuntu as builder
+WORKDIR /bedtools
+RUN apt-get -y update && apt-get -y install wget build-essential
+RUN wget -O /bedtools/bedtools-2.27.1.tar.gz 'https://github.com/arq5x/bedtools2/releases/download/v2.27.1/bedtools-2.27.1.tar.gz' \
+    && tar -zxf bedtools-2.27.1.tar.gz
+RUN apt-get -y install zlib1g-dev
+RUN apt-get -y install python
+RUN cd /bedtools/bedtools2 \
+    && make
+
+FROM r-base
+RUN Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"))'
+WORKDIR /workdir/
+COPY --from=builder /bedtools/bedtools2/bin/bedtools /app/
+COPY ./pwm_scoring ./calculate_roc.R  /app/
+ENTRYPOINT ["/app/calculate_roc.R"]
