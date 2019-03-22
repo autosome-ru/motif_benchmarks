@@ -1,0 +1,5 @@
+FROM r-base
+RUN Rscript -e 'install.packages(c("rjson", "optparse"))'
+WORKDIR /workdir/
+COPY .  /app/
+ENTRYPOINT ["/app/run-webservice.sh"]
