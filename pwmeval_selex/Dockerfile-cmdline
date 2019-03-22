@@ -1,0 +1,5 @@
+FROM r-base
+RUN Rscript -e 'install.packages(c("rjson", "optparse"))'
+WORKDIR /workdir/
+COPY ./seqshuffle ./pwm_scoring ./calculate_roc.R  /app/
+ENTRYPOINT ["/app/calculate_roc.R"]
