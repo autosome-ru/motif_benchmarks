@@ -1,0 +1,8 @@
+FROM alpine
+RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
+    && apk add R \
+    && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
+    && apk del .builddeps
+WORKDIR /workdir/
+COPY ./seqshuffle ./pwm_scoring ./calculate_roc.R  /app/
+ENTRYPOINT ["/app/calculate_roc.R"]
