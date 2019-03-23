@@ -1,0 +1,16 @@
+FROM alpine
+RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev \
+      && mkdir /bedtools && cd /bedtools \
+      && wget 'https://github.com/arq5x/bedtools2/releases/download/v2.27.1/bedtools-2.27.1.tar.gz' \
+      && tar -zxf bedtools-2.27.1.tar.gz \
+      && cd /bedtools/bedtools2 \
+      && make \
+      && mkdir -p /app && cd /app \
+      && cp /bedtools/bedtools2/bin/bedtools /app/bedtools \
+      && rm -r /bedtools \
+    && apk add R \
+    && Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"), repos = "https://cloud.r-project.org/")' \
+    && apk del .builddeps
+WORKDIR /workdir/
+COPY ./pwm_scoring ./calculate_roc.R  /app/
+ENTRYPOINT ["/app/calculate_roc.R"]
