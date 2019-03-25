@@ -79,9 +79,9 @@ n_bins = opts$bins
 positive_sequences_fn = args[1]
 matrix_fn = args[2]
 
-system(paste("cp", positive_sequences_fn, "/workdir/positive.seq"))
-system(paste("cp", matrix_fn, "/workdir/matrix.ppm"))
-system(paste("/app/seqshuffle positive.seq > /workdir/negative.seq"))
+system(paste("ln -s", positive_sequences_fn, "/workdir/positive.seq"))
+system(paste("ln -s", matrix_fn, "/workdir/matrix.ppm"))
+system(paste("/app/seqshuffle /workdir/positive.seq > /workdir/negative.seq"))
 system(paste("/app/pwm_scoring -r -w", pseudo_weight, "-m matrix.ppm /workdir/positive.seq  > /workdir/positive_PWM.out"))
 system(paste("/app/pwm_scoring -r -w", pseudo_weight, "-m matrix.ppm /workdir/negative.seq  > /workdir/negative_PWM.out"))
 
