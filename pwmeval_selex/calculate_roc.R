@@ -58,7 +58,7 @@ quality = 100
 pointsize = 20
 
 option_list = list(
-  make_option(c("--plot"), dest="plot_image", action="store_true", help="Plot ROC curve"),
+  make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
   make_option(c("--top"), type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
