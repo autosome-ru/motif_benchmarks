@@ -1,12 +1,15 @@
 FROM alpine
-COPY ./pwm_scoring.c ./seqshuffle.c /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
-    && apk add R \
+    && apk add R ttf-ubuntu-font-family \
     && mkdir -p /app/ \
-    && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
-	&& gcc -O3 -W -Wall -pedantic -std=gnu99 /source/seqshuffle.c -o /app/seqshuffle \
+     && mkdir -p /source \
+     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/pwm_scoring.c \
+     && wget -O /source/seqshuffle.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/seqshuffle.c \
+     && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
+     && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/seqshuffle.c -o /app/seqshuffle \
+     && rm -r /source \
     && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
     && apk del .builddeps
 WORKDIR /workdir/
-COPY ./calculate_roc.R  /app/
+COPY ./calculate_roc.R ./fastq2fasta.sh  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]
