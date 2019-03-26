@@ -84,8 +84,6 @@ download_file <- function(url) {
   dir.create(dirname)
   system(paste("wget -P", shQuote(dirname), shQuote(url)))
   original_fn = list.files(dirname)[1]
-  # file.copy(file.path(dirname, original_fn), output_filename)
-  # unlink(dirname, recursive=TRUE)
   return(file.path(dirname, original_fn))
 }
 
@@ -98,6 +96,22 @@ decompress_file <- function(filename, compression) {
     return(tmp_fn)
   } else {
     simpleError("Unknown compression format")
+  }
+}
+
+fastq2fasta <- function(seq_filename) {
+  tmp_fn = tempfile()
+  system(paste("/app/fastq2fasta.sh", seq_filename, " > ", shQuote(tmp_fn)))
+  return(tmp_fn)
+}
+
+convert2fasta <- function(seq_filename, seq_format) {
+  if (seq_format == 'fasta') {
+    return(seq_filename)
+  } else if (seq_format == 'fastq') {
+    return(fastq2fasta(seq_filename))
+  } else {
+    simpleError("Incorrect format")
   }
 }
 
@@ -118,7 +132,7 @@ find_mounted_sequences_file <- function() {
   return(seq_filename)
 }
 
-obtain_and_preprocess_sequences <-function() {
+obtain_and_preprocess_sequences <-function(opts) {
   if (!is.na(opts$url)) {
     seq_filename = download_file(opts$url)
   } else {
@@ -146,14 +160,8 @@ obtain_and_preprocess_sequences <-function() {
 
   # process sequences file into uncompressed FASTA file
   seq_filename = decompress_file(seq_filename, compression)
-
-  if (seq_format == 'fasta') {
-    system(paste("cp", seq_filename, "/workdir/positive.fa"))
-  } else if (seq_format == 'fastq') {
-    system(paste("/app/fastq2fasta.sh", seq_filename, " > /workdir/positive.fa"))
-  } else {
-    simpleError("Incorrect format")
-  }
+  seq_filename = convert2fasta(seq_filename, seq_format)
+  file.copy(seq_filename, "/workdir/positive.fa")
 }
 
 width = 800
@@ -175,6 +183,7 @@ option_list = list(
   make_option(c("--fastq"), dest='seq_format_fastq', default=FALSE, action="store_true", help="Use FASTQ"),
   make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
 
+  make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the letter-probability matrix (LPM) [default=%default]")
@@ -188,7 +197,6 @@ usage = paste("\n",
 description = paste("\n",
                     "Note!\n",
                     "  All local paths (for FASTA file, PPM file and results folder) should be absolute.\n",
-                    # "  FASTA and FASTQ are interchangeable. Gzipped files with .gz extension can be used.\n",
                     "  Sequences format can be derived from extension.\n",
                     "  You can use fa/fasta extensions for FASTA files and fq/fastq for FASTQ files.\n",
                     "  Also you can use gz extension for gzipped sequences.\n",
@@ -201,10 +209,7 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-positive_sequences_fn = args[1]
-matrix_fn = args[2]
-
-obtain_and_preprocess_sequences()
+dummy = obtain_and_preprocess_sequences(opts)
 
 system(paste("ln -s /motif.ppm /workdir/motif.ppm"))
 system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
