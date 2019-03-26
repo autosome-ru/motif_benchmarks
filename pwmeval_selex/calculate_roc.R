@@ -57,6 +57,105 @@ roc_curve_as_points_list <- function(tpr, fpr) {
   return(roc_curve)
 }
 
+guess_format <- function(filename) {
+  if (endsWith(filename, ".gz")) {
+    compression = "gz"
+  } else {
+    compression = "no"
+  }
+
+  filename = sub("\\.gz$", "", filename)
+
+  if (endsWith(filename, ".fa") || endsWith(filename, ".fasta")) {
+    seq_format = "fasta"
+  } else if (endsWith(filename, ".fq") || endsWith(filename, ".fastq")) {
+    seq_format = "fastq"
+  } else { # default
+    seq_format = "fasta"
+  }
+  return(list(compression=compression, seq_format=seq_format))
+}
+
+download_file <- function(url) {
+  # We want to find out original name of the downloaded file.
+  # So we create a folder and download the only file to it
+  # and can get the name of that file
+  dirname = tempfile()
+  dir.create(dirname)
+  system(paste("wget -P", shQuote(dirname), shQuote(url)))
+  original_fn = list.files(dirname)[1]
+  # file.copy(file.path(dirname, original_fn), output_filename)
+  # unlink(dirname, recursive=TRUE)
+  return(file.path(dirname, original_fn))
+}
+
+decompress_file <- function(filename, compression) {
+  if (compression == "no") {
+    return(filename)
+  } else if (compression == "gz") {
+    tmp_fn = tempfile()
+    system(paste("gzip -cd", filename, " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    simpleError("Unknown compression format")
+  }
+}
+
+find_mounted_sequences_file <- function() {
+  fasta_files = c('/seq.fasta', '/seq.fa', '/seq.fasta.gz', '/seq.fa.gz')
+  fastq_files = c('/seq.fastq', '/seq.fq', '/seq.fastq.gz', '/seq.fq.gz')
+  no_format_files = c('/seq', '/seq.gz')
+  acceptable_seq_files = c(no_format_files, fasta_files, fastq_files)
+  existing_seq_files = file.exists(acceptable_seq_files)
+
+  if (sum(existing_seq_files) == 0) {
+    simpleError("Provide a file with SELEX sequences. Either mount to /seq or its counterparts, or pass it via URL.")
+  } else if (sum(existing_seq_files) > 1) {
+    simpleError("Provide the only file with SELEX sequences.")
+  }
+
+  seq_filename = acceptable_seq_files[existing_seq_files][1]
+  return(seq_filename)
+}
+
+obtain_and_preprocess_sequences <-function() {
+  if (!is.na(opts$url)) {
+    seq_filename = download_file(opts$url)
+  } else {
+    seq_filename = find_mounted_sequences_file()
+  }
+
+  guessed_format = guess_format(seq_filename)
+  seq_format = guessed_format$seq_format
+  compression = guessed_format$compression
+
+
+  # override sequences format/compression
+  if (opts$seq_format_fasta) {
+    seq_format = 'fasta'
+  }
+  if (opts$seq_format_fastq) {
+    seq_format = 'fastq'
+  }
+  if (opts$compression_no) {
+    compression = 'no'
+  }
+  if (opts$compression_gz) {
+    compression = 'gz'
+  }
+
+  # process sequences file into uncompressed FASTA file
+  seq_filename = decompress_file(seq_filename, compression)
+
+  if (seq_format == 'fasta') {
+    system(paste("cp", seq_filename, "/workdir/positive.fa"))
+  } else if (seq_format == 'fastq') {
+    system(paste("/app/fastq2fasta.sh", seq_filename, " > /workdir/positive.fa"))
+  } else {
+    simpleError("Incorrect format")
+  }
+}
+
 width = 800
 height = 800
 quality = 100
@@ -69,21 +168,34 @@ option_list = list(
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
   make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
   make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file"),
-  make_option(c("--fastq"), default=FALSE, action="store_true", help="Use FASTQ file instead of FASTA"),
+
+  make_option(c("--gz"), dest="compression_gz", default=FALSE, action="store_true", help="Force un-gzipping sequences"),
+  make_option(c("--not-compressed"), dest="compression_no", default=FALSE, action="store_true", help="Prevent un-gzipping sequences"),
+
+  make_option(c("--fastq"), dest='seq_format_fastq', default=FALSE, action="store_true", help="Use FASTQ"),
+  make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
+
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the letter-probability matrix (LPM) [default=%default]")
 )
 usage = paste("\n",
-              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq.fa  pwmeval_selex [options]\n",
+              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
               "  or\n",
-              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq.fa  -v {results}:/results  pwmeval_selex [options]\n",
+              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  -v {results}:/results  pwmeval_selex [options]\n",
               " or\n",
               "docker run --rm  -v {PPM}:/motif.ppm  pwmeval_selex --url {Selex FASTA URL} [options]\n")
 description = paste("\n",
                     "Note!\n",
                     "  All local paths (for FASTA file, PPM file and results folder) should be absolute.\n",
-                    "  FASTA and FASTQ are interchangeable. Gzipped files with .gz extension can be used")
+                    # "  FASTA and FASTQ are interchangeable. Gzipped files with .gz extension can be used.\n",
+                    "  Sequences format can be derived from extension.\n",
+                    "  You can use fa/fasta extensions for FASTA files and fq/fastq for FASTQ files.\n",
+                    "  Also you can use gz extension for gzipped sequences.\n",
+                    "  So that /seq.fastq.gz is a correct way to pass a gzipped FASTQ file.\n",
+                    "  Options like --fasta/--fastq, --gz/--not-compressed override derived format,\n",
+                    "  what is especially useful for passing sequences via url.\n",
+                    "  In case when format is specified via options `/seq` with extension omitted can be used.\n")
 opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
 opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
@@ -92,23 +204,7 @@ args <- opts_and_args[[2]]
 positive_sequences_fn = args[1]
 matrix_fn = args[2]
 
-if (is.na(opts$url)) {
-  system(paste("cp /seq.fa /workdir/positive.seq"))
-} else {
-  url <- opts$url
-  if (endsWith(url, '.gz')) {
-    system(paste("wget -O /workdir/positive.seq.gz", shQuote(url)))
-    system(paste("gzip -d /workdir/positive.seq.gz"))
-  } else {
-    system(paste("wget -O /workdir/positive.seq", shQuote(url)))
-  }
-}
-
-if (opts$fastq) {
-  system("/app/fastq2fasta.sh /workdir/positive.seq  > /workdir/positive.fa")
-} else {
-  system("cp /workdir/positive.seq /workdir/positive.fa")
-}
+obtain_and_preprocess_sequences()
 
 system(paste("ln -s /motif.ppm /workdir/motif.ppm"))
 system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
