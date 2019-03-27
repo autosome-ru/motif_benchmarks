@@ -6,7 +6,7 @@
 #include <cstring>
 
 bool has_only_acgt(const std::string& seq) {
-	for (int i = 0; i < seq.length(); ++i){
+	for (size_t i = 0; i < seq.length(); ++i){
 		char letter = toupper(seq[i]);
 		if (!(letter == 'A' || letter == 'C' || letter == 'G' || letter == 'T')) {
 			return false;
@@ -15,7 +15,7 @@ bool has_only_acgt(const std::string& seq) {
 	return true;
 }
 
-void filter_fasta(std::istream& input, std::ostream& output, bool only_acgt = false, int seq_length = -1) {
+void filter_fasta(std::istream& input, std::ostream& output, bool only_acgt = false, size_t seq_length = 0) {
 	bool skip = false;
 	std::string seq_id, seq;
 	while (input.good()) {
@@ -24,7 +24,7 @@ void filter_fasta(std::istream& input, std::ostream& output, bool only_acgt = fa
 		if (line.length() > 0) {
 			if (line[0] == '>') {
 				if (seq_id.length() > 0 || seq.length() > 0) {
-					skip = (only_acgt && !has_only_acgt(seq)) || ((seq_length != -1) && (seq.length() != seq_length));
+					skip = (only_acgt && !has_only_acgt(seq)) || ((seq_length != 0) && (seq.length() != seq_length));
 					if (!skip) {
 						output << seq_id << std::endl << seq << std::endl;
 					}
@@ -36,10 +36,16 @@ void filter_fasta(std::istream& input, std::ostream& output, bool only_acgt = fa
 			}
 		} 
 	}
+  if (seq_id.length() > 0 || seq.length() > 0) {
+    skip = (only_acgt && !has_only_acgt(seq)) || ((seq_length != 0) && (seq.length() != seq_length));
+    if (!skip) {
+      output << seq_id << std::endl << seq << std::endl;
+    }
+  }
 }
 
 int main(int argc, char **argv) {
-  int seq_length;
+  size_t seq_length;
   bool only_acgt;
   if (argc < 4) {
     std::cerr << "Usage: " << argv[0] << " <filename or - for stdin> <sequence length = integer|no> <only acgt = yes|no>" << std::endl;
@@ -47,7 +53,7 @@ int main(int argc, char **argv) {
   }
   
   if (!strcmp(argv[2], "no")) {
-    seq_length = -1;
+    seq_length = 0;
   } else {
     seq_length = atoi(argv[2]);
   }

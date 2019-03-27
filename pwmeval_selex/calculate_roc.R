@@ -77,7 +77,7 @@ guess_format <- function(filename) {
 }
 
 # override sequences format/compression based on command-line options
-refine_format_guess <- function(guessed_format, opts)
+refine_format_guess <- function(guessed_format, opts) {
   seq_format = guessed_format$seq_format
   compression = guessed_format$compression
 

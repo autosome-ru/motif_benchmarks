@@ -7,7 +7,7 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
      && wget -O /source/seqshuffle.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/seqshuffle.c \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/seqshuffle.c -o /app/seqshuffle \
-     && g++ -O3 -W -Wall -pedantic -std=gnu99 /source/filter_fasta.cpp -o /app/filter_fasta \
+     && g++ -O3 -W -Wall -pedantic /source/filter_fasta.cpp -o /app/filter_fasta \
      && rm /source/pwm_scoring.c /source/seqshuffle.c \
     && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
     && apk del .builddeps
