@@ -15,7 +15,7 @@ plot_roc <- function(roc_data, image_filename) {
 option_list = list(
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
-  make_option(c("--top"), type="integer", default=500, help="Number of top peaks to take [default=%default]"),
+  make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]"),
 )
 
 opt_parser <- OptionParser(option_list=option_list);
@@ -23,24 +23,31 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-plot_image = opts$plot_image
-image_filename = opts$image_filename
-# pseudo_weight = opts$pseudo_weight
-num_top_peaks = opts$top
-# n_bins = opts$bins
+system(paste("cp /peaks.narrowPeak /workdir/peaks.narrowPeak"))
+system(paste("cp /motif.ppm /workdir/matrix.ppm"))
 
-peaks_fn = args[1]
-matrix_fn = args[2]
-
-system(paste("ln -s", peaks_fn, "/workdir/peaks.narrowPeak"))
-system(paste("ln -s", matrix_fn, "/workdir/matrix.ppm"))
+if (dir.exists("/assembly")) {
+  assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
+  assembly_sizes_fn = file.path("/assembly", paste(opts$assembly_name, ".sizes", sep=""))
+  if (file.exists(assembly_fasta_fn))
+} else{
+  if (file.exists("/assembly.fa")) {
+    assembly_fasta_fn = "/assembly.fa"
+    assembly_sizes_fn = "/assembly.sizes"
+  } else {
+    simpleError("Mount /assembly.fa file (also /assembly.sizes and /assembly.fa.fai not to recalculate them)")
+  }
+}
+if (!file.exists(assembly_sizes_fn)) {
+  system(paste("/app/chrom_sizes", shQuote(assembly_fasta_fn), " > ", shQuote(assembly_sizes_fn)))
+}
 
 system("/app/narrowpeak2bed /workdir/peaks.narrowPeak > /workdir/scored_peaks.bed")
-system("sort -k5,5nr /workdir/scored_peaks.bed | head -n", num_top_peaks, " > /workdir/top_peaks.bed")
-system("/app/bedtools slop -i /workdir/top_peaks.bed -g /data/genome.sizes -l 124 -r 125  > /workdir/positive_peaks.bed")
-system("/app/bedtools slop -i /workdir/top_peaks.bed -g /data/genome.sizes -l -301 -r 550  > /workdir/negative_peaks.bed")
-system("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi /data/genome.fa  > /workdir/positive.seq")
-system("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi /data/genome.fa  > /workdir/negative.seq")
+system(paste("sort -k5,5nr /workdir/scored_peaks.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
+system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.sizes -l 124 -r 125  > /workdir/positive_peaks.bed")
+system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.sizes -l -301 -r 550  > /workdir/negative_peaks.bed")
+system("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi /assembly.fa  > /workdir/positive.seq")
+system("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi /assembly.fa  > /workdir/negative.seq")
 
 system("/app/pwm_scoring -r -u -m /workdir/matrix.ppm /workdir/positive.seq  > /workdir/positive_PWM.out")
 system("/app/pwm_scoring -r -u -m /workdir/matrix.ppm /workdir/negative.seq  > /workdir/negative_PWM.out")
@@ -55,9 +62,8 @@ pos <- cbind(pos, pos_labs)
 neg <- cbind(neg, neg_labs)
 comb_sets <- rbind(pos, neg)
 roc_data <- roc(response = comb_sets[, 2], predictor = comb_sets[, 1])
-# write.table(roc_data$auc, col.names=F, row.names=T, file="$workDir/motif_hg19_35623_AUC.out", quote=F, sep=" ")
 writeLines(roc_data$auc)
 
-if (plot_image) {
-  plot_roc(roc_data, image_filename)
+if (opts$plot_image) {
+  plot_roc(roc_data, opts$image_filename)
 }
