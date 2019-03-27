@@ -135,6 +135,7 @@ convert2fasta <- function(seq_filename, seq_format) {
   }
 }
 
+# in addition to filtering it also joins FASTA spreaded on multiple lines into single-string format
 filter_fasta <- function(seq_filename, opts) {
   only_acgt = 'yes'
   if (opts$allow_iupac) {
@@ -149,6 +150,16 @@ filter_fasta <- function(seq_filename, opts) {
   tmp_fn = tempfile()
   system(paste("/app/filter_fasta", shQuote(seq_filename), seq_length,  only_acgt, " > ", shQuote(tmp_fn)))
   return(tmp_fn)
+}
+
+filter_redundant <- function(seq_filename, opts) {
+  if (opts$non_redundant) {
+    tmp_fn = tempfile()
+    system(paste("/app/filter_redundant.sh", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    return(seq_filename)
+  }
 }
 
 find_mounted_sequences_file <- function() {
@@ -182,6 +193,7 @@ obtain_and_preprocess_sequences <-function(opts) {
   seq_filename = decompress_file(seq_filename, format_info$compression)
   seq_filename = convert2fasta(seq_filename, format_info$seq_format)
   seq_filename = filter_fasta(seq_filename, opts)
+  seq_filename = filter_redundant(seq_filename, opts)
   file.copy(seq_filename, "/workdir/positive.fa")
 }
 
@@ -206,6 +218,7 @@ option_list = list(
 
   make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
   make_option(c("--allow-iupac"), dest="allow_iupac", default=FALSE, action="store_true", help="Allow IUPAC sequences (by default only ACGT are valid)."),
+  make_option(c("--non-redundant"), dest="non_redundant", default=FALSE, action="store_true", help="Retain only unique sequences."),
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the letter-probability matrix (LPM) [default=%default]")
