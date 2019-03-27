@@ -5,7 +5,7 @@
 #include <cctype>
 #include <cstring>
 
-bool has_only_acgt(std::string seq) {
+bool has_only_acgt(const std::string& seq) {
 	for (int i = 0; i < seq.length(); ++i){
 		char letter = toupper(seq[i]);
 		if (!(letter == 'A' || letter == 'C' || letter == 'G' || letter == 'T')) {

@@ -76,6 +76,26 @@ guess_format <- function(filename) {
   return(list(compression=compression, seq_format=seq_format))
 }
 
+# override sequences format/compression based on command-line options
+refine_format_guess <- function(guessed_format, opts)
+  seq_format = guessed_format$seq_format
+  compression = guessed_format$compression
+
+  if (opts$seq_format_fasta) {
+    seq_format = 'fasta'
+  }
+  if (opts$seq_format_fastq) {
+    seq_format = 'fastq'
+  }
+  if (opts$compression_no) {
+    compression = 'no'
+  }
+  if (opts$compression_gz) {
+    compression = 'gz'
+  }
+  return(list(compression=compression, seq_format=seq_format))
+}
+
 download_file <- function(url) {
   # We want to find out original name of the downloaded file.
   # So we create a folder and download the only file to it
@@ -115,6 +135,22 @@ convert2fasta <- function(seq_filename, seq_format) {
   }
 }
 
+filter_fasta <- function(seq_filename, opts) {
+  only_acgt = 'yes'
+  if (opts$allow_iupac) {
+    only_acgt = 'no'
+  }
+
+  seq_length = 'no'
+  if (!is.na(opts$seq_length)) {
+    seq_length = opts$seq_length
+  }
+
+  tmp_fn = tempfile()
+  system(paste("/app/filter_fasta", shQuote(seq_filename), seq_length,  only_acgt, " > ", shQuote(tmp_fn)))
+  return(tmp_fn)
+}
+
 find_mounted_sequences_file <- function() {
   fasta_files = c('/seq.fasta', '/seq.fa', '/seq.fasta.gz', '/seq.fa.gz')
   fastq_files = c('/seq.fastq', '/seq.fq', '/seq.fastq.gz', '/seq.fq.gz')
@@ -140,27 +176,12 @@ obtain_and_preprocess_sequences <-function(opts) {
   }
 
   guessed_format = guess_format(seq_filename)
-  seq_format = guessed_format$seq_format
-  compression = guessed_format$compression
-
-
-  # override sequences format/compression
-  if (opts$seq_format_fasta) {
-    seq_format = 'fasta'
-  }
-  if (opts$seq_format_fastq) {
-    seq_format = 'fastq'
-  }
-  if (opts$compression_no) {
-    compression = 'no'
-  }
-  if (opts$compression_gz) {
-    compression = 'gz'
-  }
+  format_info = refine_format_guess(guessed_format, opts)
 
   # process sequences file into uncompressed FASTA file
-  seq_filename = decompress_file(seq_filename, compression)
-  seq_filename = convert2fasta(seq_filename, seq_format)
+  seq_filename = decompress_file(seq_filename, format_info$compression)
+  seq_filename = convert2fasta(seq_filename, format_info$seq_format)
+  seq_filename = filter_fasta(seq_filename, opts)
   file.copy(seq_filename, "/workdir/positive.fa")
 }
 
@@ -184,6 +205,7 @@ option_list = list(
   make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
 
   make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
+  make_option(c("--allow-iupac"), dest="allow_iupac", default=FALSE, action="store_true", help="Allow IUPAC sequences (by default only ACGT are valid)."),
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the letter-probability matrix (LPM) [default=%default]")
