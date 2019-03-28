@@ -2,7 +2,7 @@ FROM alpine
 COPY ./chrom_sizes.cpp /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev \
     && mkdir -p /app/ \
-     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/pwm_scoring.c \
+     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/7973c98a13685fc66984af5dd43048aee7f79456/pwm_scoring.c \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
      && g++ -O3 -W -Wall -pedantic /source/chrom_sizes.cpp -o /app/chrom_sizes \
      && rm /source/pwm_scoring.c \
@@ -18,5 +18,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
     && Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"), repos = "https://cloud.r-project.org/")' \
     && apk del .builddeps
 WORKDIR /workdir/
-COPY ./pwm_scoring ./calculate_roc.R ./narrowpeak2bed  /app/
+COPY ./calculate_roc.R ./narrowpeak2bed  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]

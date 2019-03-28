@@ -3,8 +3,8 @@ COPY ./filter_fasta.cpp /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && apk add R ttf-ubuntu-font-family \
     && mkdir -p /app/ \
-     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/pwm_scoring.c \
-     && wget -O /source/seqshuffle.c  https://raw.githubusercontent.com/gio31415/PWMEval/master/seqshuffle.c \
+     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/7973c98a13685fc66984af5dd43048aee7f79456/pwm_scoring.c \
+     && wget -O /source/seqshuffle.c  https://raw.githubusercontent.com/gio31415/PWMEval/7973c98a13685fc66984af5dd43048aee7f79456/seqshuffle.c \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/seqshuffle.c -o /app/seqshuffle \
      && g++ -O3 -W -Wall -pedantic /source/filter_fasta.cpp -o /app/filter_fasta \
