@@ -32,6 +32,7 @@ auc_approx <- function(pos, neg, top_fraction, n_bins) {
   for(i in 2:n_bins) {
     AUC = AUC + dneg[i] * 0.5 * (sens[i] + sens[i-1])
   }
+  AUC = max(min(AUC, 1.0), 0.0)
   return( list(auc=AUC, fpr=fpr, tpr=sens) )
 }
 
@@ -39,7 +40,7 @@ store_roc <- function(roc_data, output_filename) {
   write.table(list(tpr=roc_data$tpr, fpr=roc_data$fpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
 }
 
-plot_roc <- function(roc_data, output_filename) {
+plot_roc <- function(roc_data, output_filename, width = 800, height = 800, pointsize = 20) {
   png(output_filename, width = width, height = height, pointsize = pointsize)
   plot(1 - roc_data$fpr, roc_data$tpr, t="s", col="red", xlab="1-Specificity", ylab="Sensitivity", main="ROC curve of TF motif predictor", 
       xlim=c(1,0), lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4, family='Liberation')
@@ -263,7 +264,6 @@ get_ppm <- function(filename, format) {
 
 width = 800
 height = 800
-quality = 100
 pointsize = 20
 
 option_list = list(
@@ -312,8 +312,8 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-dummy = obtain_and_preprocess_sequences(opts)
 dummy = obtain_and_preprocess_motif(opts)
+dummy = obtain_and_preprocess_sequences(opts)
 
 system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/positive.fa  > /workdir/PPM_scores_positive.txt"))
@@ -324,7 +324,7 @@ NEG <- log10(as.numeric(read.table("/workdir/PPM_scores_negative.txt", header=F)
 
 roc_data <- auc_approx(POS, NEG, opts$top_fraction, opts$num_bins)
 if (opts$plot_image) {
-  plot_roc(roc_data, file.path('/results', opts$image_filename))
+  plot_roc(roc_data, file.path('/results', opts$image_filename), width = width, height = height, pointsize = pointsize)
 }
 if (opts$store_roc) {
   store_roc(roc_data, file.path('/results', opts$roc_filename))
