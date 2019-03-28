@@ -57,7 +57,7 @@ roc_curve_as_points_list <- function(tpr, fpr) {
   return(roc_curve)
 }
 
-guess_format <- function(filename) {
+guess_seq_format <- function(filename) {
   if (endsWith(filename, ".gz")) {
     compression = "gz"
   } else {
@@ -77,7 +77,7 @@ guess_format <- function(filename) {
 }
 
 # override sequences format/compression based on command-line options
-refine_format_guess <- function(guessed_format, opts) {
+refine_seq_format_guess <- function(guessed_format, opts) {
   seq_format = guessed_format$seq_format
   compression = guessed_format$compression
 
@@ -179,23 +179,87 @@ find_mounted_sequences_file <- function() {
   return(seq_filename)
 }
 
-obtain_and_preprocess_sequences <-function(opts) {
-  if (!is.na(opts$url)) {
-    seq_filename = download_file(opts$url)
+
+obtain_and_preprocess_sequences <- function(opts) {
+  if (!is.na(opts$seq_url)) {
+    seq_filename = download_file(opts$seq_url)
   } else {
     seq_filename = find_mounted_sequences_file()
   }
 
-  guessed_format = guess_format(seq_filename)
-  format_info = refine_format_guess(guessed_format, opts)
+  seq_format_info = refine_seq_format_guess(guess_seq_format(seq_filename), opts)
 
   # process sequences file into uncompressed FASTA file
-  seq_filename = decompress_file(seq_filename, format_info$compression)
-  seq_filename = convert2fasta(seq_filename, format_info$seq_format)
+  seq_filename = decompress_file(seq_filename, seq_format_info$compression)
+  seq_filename = convert2fasta(seq_filename, seq_format_info$seq_format)
   seq_filename = filter_fasta(seq_filename, opts)
   seq_filename = filter_redundant(seq_filename, opts)
   file.copy(seq_filename, "/workdir/positive.fa")
 }
+
+obtain_and_preprocess_motif <- function(opts) {
+  if (!is.na(opts$motif_url)) {
+    motif_filename = download_file(opts$motif_url)
+  } else {
+    motif_filename = find_mounted_motif_file()
+  }
+
+  motif_format = refine_motif_format_guess(guess_motif_format(motif_filename), opts)
+  motif_filename = get_ppm(motif_filename, motif_format)
+  file.copy(motif_filename, "/workdir/motif.ppm")
+}
+
+find_mounted_motif_file <- function() {
+  ppm_files = c('/motif.ppm', '/motif.pfm', '/matrix.ppm', '/matrix.pfm')
+  pcm_files = c('/motif.pcm', '/matrix.pcm')
+  no_format_files = c('/motif', '/matrix')
+  acceptable_motif_files = c(no_format_files, ppm_files, pcm_files)
+  existing_motif_files = file.exists(acceptable_motif_files)
+
+  if (sum(existing_motif_files) == 0) {
+    simpleError("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
+  } else if (sum(existing_motif_files) > 1) {
+    simpleError("Provide the only file with positional frequencies/counts matrix")
+  }
+
+  motif_filename = acceptable_motif_files[existing_motif_files][1]
+  return(motif_filename)
+}
+
+guess_motif_format <- function(filename) {
+  if (endsWith(filename, ".pcm")) {
+    seq_format = "pcm"
+  } else if (endsWith(filename, ".pfm") || endsWith(filename, ".ppm")) {
+    seq_format = "ppm"
+  } else { # default
+    seq_format = "pcm"
+  }
+  return(seq_format)
+}
+
+# override motif format based on command-line options
+refine_motif_format_guess <- function(guessed_format, opts) {
+  format = guessed_format
+  if (opts$ppm) {
+    format = 'ppm'
+  } else if (opts$pcm) {
+    format = 'pcm'
+  }
+  return(format)
+}
+
+get_ppm <- function(filename, format) {
+  if (format == 'pcm') {
+    tmp_fn = tempfile()
+    system(paste("/app/pcm2ppm.R", shQuote(filename), " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else if (format == 'ppm') {
+    return(filename)
+  } else {
+    simpleError("Unknown motif format")
+  }
+}
+
 
 width = 800
 height = 800
@@ -203,7 +267,8 @@ quality = 100
 pointsize = 20
 
 option_list = list(
-  make_option(c("--url"), type='character', default=NA, help="Use FASTA file located at some URL"),
+  make_option(c("--seq-url"), dest= 'seq_url', type='character', default=NA, help="Use FASTA file located at some URL"),
+  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
@@ -215,20 +280,23 @@ option_list = list(
 
   make_option(c("--fastq"), dest='seq_format_fastq', default=FALSE, action="store_true", help="Use FASTQ"),
   make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
+  
+  make_option(c("--ppm"), default=FALSE, action="store_true", help="Force use of PPM matrix"),
+  make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
 
   make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
   make_option(c("--allow-iupac"), dest="allow_iupac", default=FALSE, action="store_true", help="Allow IUPAC sequences (by default only ACGT are valid)."),
   make_option(c("--non-redundant"), dest="non_redundant", default=FALSE, action="store_true", help="Retain only unique sequences."),
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
-  make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the letter-probability matrix (LPM) [default=%default]")
+  make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PPM) [default=%default]")
 )
 usage = paste("\n",
               "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
               "  or\n",
               "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  -v {results}:/results  pwmeval_selex [options]\n",
               " or\n",
-              "docker run --rm  -v {PPM}:/motif.ppm  pwmeval_selex --url {Selex FASTA URL} [options]\n")
+              "docker run --rm  pwmeval_selex --motif-url {Motif URL} --seq-url {Selex FASTA URL} [options]\n")
 description = paste("\n",
                     "Note!\n",
                     "  All local paths (for FASTA file, PPM file and results folder) should be absolute.\n",
@@ -245,8 +313,8 @@ opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
 dummy = obtain_and_preprocess_sequences(opts)
+dummy = obtain_and_preprocess_motif(opts)
 
-system(paste("ln -s /motif.ppm /workdir/motif.ppm"))
 system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/positive.fa  > /workdir/PPM_scores_positive.txt"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/negative.fa  > /workdir/PPM_scores_negative.txt"))
