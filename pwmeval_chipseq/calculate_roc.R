@@ -20,6 +20,7 @@ height = 800
 pointsize = 20
 
 option_list = list(
+  make_option(c("--assembly-name"), dest= 'assembly_name', type='character', default=NA, help="Choose assembly by name"),
   make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
   make_option(c("--peaks-url"), dest= 'peaks_url', type='character', default=NA, help="Use peaks file located at some URL"),
 
@@ -49,7 +50,7 @@ if (dir.exists("/assembly")) {
   assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
   assembly_sizes_fn = file.path("/assembly", paste(opts$assembly_name, ".sizes", sep=""))
   if (!file.exists(assembly_fasta_fn)) {
-    # wget it
+    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", file.path("/assembly/", opts$assembly_name.fa)))
   }
 } else{
   if (file.exists("/assembly.fa")) {
