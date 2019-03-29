@@ -8,3 +8,15 @@ download_file <- function(url) {
   original_fn = list.files(dirname)[1]
   return(file.path(dirname, original_fn))
 }
+
+decompress_file <- function(filename, compression) {
+  if (compression == "no") {
+    return(filename)
+  } else if (compression == "gz") {
+    tmp_fn = tempfile()
+    system(paste("gzip -cd", filename, " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    simpleError("Unknown compression format")
+  }
+}

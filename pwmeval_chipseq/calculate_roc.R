@@ -2,9 +2,10 @@
 library('optparse')
 library('MASS')
 library('caTools')
-library('pROC')
+suppressPackageStartupMessages(library('pROC'))
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
+source('/app/peak_preprocessing.R')
 
 plot_roc <- function(roc_data, image_filename, width = 800, height = 800, pointsize = 20) {
   png(image_filename, width = width, height = height, pointsize = pointsize)
@@ -20,8 +21,16 @@ pointsize = 20
 
 option_list = list(
   make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
+  make_option(c("--peaks-url"), dest= 'peaks_url', type='character', default=NA, help="Use peaks file located at some URL"),
+
   make_option(c("--ppm"), default=FALSE, action="store_true", help="Force use of PPM matrix"),
   make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
+
+  make_option(c("--narrowPeak"), dest='peak_format_narrowPeak', default=FALSE, action="store_true", help="Peaks are formatted in narrowPeak (peaks are reshaped into constant-size peaks around summit of a peak)"),
+  make_option(c("--bed"), dest='peak_format_bed', default=FALSE, action="store_true", help="Peaks are formatted in bed (peaks are reshaped into constant-size peaks around center of a peak)"),
+
+  make_option(c("--gz"), dest="compression_gz_peaks", default=FALSE, action="store_true", help="Force un-gzipping peaks"),
+  make_option(c("--not-compressed"), dest="compression_no_peaks", default=FALSE, action="store_true", help="Prevent un-gzipping peaks"),
 
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
@@ -34,8 +43,7 @@ opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
 dummy = obtain_and_preprocess_motif(opts)
-
-system(paste("cp /peaks.narrowPeak /workdir/peaks.narrowPeak"))
+dummy = obtain_and_preprocess_peaks(opts)
 
 if (dir.exists("/assembly")) {
   assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
@@ -57,8 +65,7 @@ if (!file.exists(assembly_sizes_fn)) {
   system(paste("/app/chrom_sizes", shQuote(assembly_fasta_fn), " > ", shQuote(assembly_sizes_fn)))
 }
 
-system("/app/narrowpeak2bed /workdir/peaks.narrowPeak > /workdir/scored_peaks.bed")
-system(paste("sort -k5,5nr /workdir/scored_peaks.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
+system(paste("sort -k5,5nr /workdir/peak_centers_scored.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
 system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.chrom.sizes -l 124 -r 125  > /workdir/positive_peaks.bed")
 system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.chrom.sizes -l -301 -r 550  > /workdir/negative_peaks.bed")
 system("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi /assembly.fa  > /workdir/positive.seq")

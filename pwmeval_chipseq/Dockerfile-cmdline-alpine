@@ -18,5 +18,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
     && Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"), repos = "https://cloud.r-project.org/")' \
     && apk del .builddeps
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./pcm2ppm.R ./utils.R ./motif_preprocessing.R ./narrowpeak2bed  /app/
+COPY ./calculate_roc.R ./pcm2ppm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh /app/
 ENTRYPOINT ["/app/calculate_roc.R"]
