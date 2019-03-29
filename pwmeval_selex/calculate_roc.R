@@ -88,6 +88,7 @@ option_list = list(
   make_option(c("--non-redundant"), dest="non_redundant", default=FALSE, action="store_true", help="Retain only unique sequences."),
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
+  make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PPM) [default=%default]")
 )
 usage = paste("\n",
@@ -114,7 +115,11 @@ args <- opts_and_args[[2]]
 dummy = obtain_and_preprocess_motif(opts)
 dummy = obtain_and_preprocess_sequences(opts)
 
-system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
+if (is.na(opts$seed)) {
+  system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
+} else {
+  system(paste("/app/seqshuffle -s", opts$seed, "/workdir/positive.fa > /workdir/negative.fa"))
+}
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/positive.fa  > /workdir/PPM_scores_positive.txt"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/negative.fa  > /workdir/PPM_scores_negative.txt"))
 
