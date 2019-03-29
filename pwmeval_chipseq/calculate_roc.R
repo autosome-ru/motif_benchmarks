@@ -3,6 +3,8 @@ library('optparse')
 library('MASS')
 library('caTools')
 library('pROC')
+source('/app/utils.R')
+source('/app/motif_preprocessing.R')
 
 plot_roc <- function(roc_data, image_filename, width = 800, height = 800, pointsize = 20) {
   png(image_filename, width = width, height = height, pointsize = pointsize)
@@ -17,6 +19,10 @@ height = 800
 pointsize = 20
 
 option_list = list(
+  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
+  make_option(c("--ppm"), default=FALSE, action="store_true", help="Force use of PPM matrix"),
+  make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
+
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
   make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]")
@@ -27,8 +33,9 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
+dummy = obtain_and_preprocess_motif(opts)
+
 system(paste("cp /peaks.narrowPeak /workdir/peaks.narrowPeak"))
-system(paste("cp /motif.ppm /workdir/matrix.ppm"))
 
 if (dir.exists("/assembly")) {
   assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
@@ -57,8 +64,8 @@ system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.chrom.sizes -l
 system("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi /assembly.fa  > /workdir/positive.seq")
 system("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi /assembly.fa  > /workdir/negative.seq")
 
-system("/app/pwm_scoring -r -u -m /workdir/matrix.ppm /workdir/positive.seq  > /workdir/positive_PWM.out")
-system("/app/pwm_scoring -r -u -m /workdir/matrix.ppm /workdir/negative.seq  > /workdir/negative_PWM.out")
+system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/positive.seq  > /workdir/positive_PWM.out")
+system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/negative.seq  > /workdir/negative_PWM.out")
 
 pos <- as.matrix(read.table("/workdir/positive_PWM.out"))
 neg <- as.matrix(read.table("/workdir/negative_PWM.out"))
