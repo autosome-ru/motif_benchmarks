@@ -41,7 +41,7 @@ refine_seq_format_guess <- function(guessed_format, opts) {
 
 fastq2fasta <- function(seq_filename) {
   tmp_fn = tempfile()
-  system(paste("/app/fastq2fasta.sh", seq_filename, " > ", shQuote(tmp_fn)))
+  system(paste("/app/fastq2fasta.sh", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
   return(tmp_fn)
 }
 
