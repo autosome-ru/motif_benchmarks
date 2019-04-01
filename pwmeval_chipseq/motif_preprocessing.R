@@ -20,9 +20,9 @@ find_mounted_motif_file <- function() {
   existing_motif_files = file.exists(acceptable_motif_files)
 
   if (sum(existing_motif_files) == 0) {
-    simpleError("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
+    stop("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
   } else if (sum(existing_motif_files) > 1) {
-    simpleError("Provide the only file with positional frequencies/counts matrix")
+    stop("Provide the only file with positional frequencies/counts matrix")
   }
 
   motif_filename = acceptable_motif_files[existing_motif_files][1]
@@ -59,6 +59,6 @@ get_ppm <- function(filename, format) {
   } else if (format == 'ppm') {
     return(filename)
   } else {
-    simpleError("Unknown motif format")
+    stop("Unknown motif format")
   }
 }

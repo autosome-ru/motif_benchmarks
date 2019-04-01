@@ -51,7 +51,7 @@ convert2fasta <- function(seq_filename, seq_format) {
   } else if (seq_format == 'fastq') {
     return(fastq2fasta(seq_filename))
   } else {
-    simpleError("Incorrect format")
+    stop("Incorrect format")
   }
 }
 
@@ -90,9 +90,9 @@ find_mounted_sequences_file <- function() {
   existing_seq_files = file.exists(acceptable_seq_files)
 
   if (sum(existing_seq_files) == 0) {
-    simpleError("Provide a file with SELEX sequences. Either mount to /seq or its counterparts, or pass it via URL.")
+    stop("Provide a file with SELEX sequences. Either mount to /seq or its counterparts, or pass it via URL.")
   } else if (sum(existing_seq_files) > 1) {
-    simpleError("Provide the only file with SELEX sequences.")
+    stop("Provide the only file with SELEX sequences.")
   }
 
   seq_filename = acceptable_seq_files[existing_seq_files][1]

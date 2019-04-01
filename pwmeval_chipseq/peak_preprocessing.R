@@ -57,7 +57,7 @@ get_single_points_bed <- function(peak_filename, peak_format) {
   } else if (peak_format == 'narrowPeak') {
     return(narrowPeak_summit(peak_filename))
   } else {
-    simpleError("Incorrect peak format")
+    stop("Incorrect peak format")
   }
 }
 
@@ -69,9 +69,9 @@ find_mounted_peaks_file <- function() {
   existing_peak_files = file.exists(acceptable_peak_files)
 
   if (sum(existing_peak_files) == 0) {
-    simpleError("Provide a file with peaks. Either mount to /peak or its counterparts, or pass it via URL.")
+    stop("Provide a file with peaks. Either mount to /peak or its counterparts, or pass it via URL.")
   } else if (sum(existing_peak_files) > 1) {
-    simpleError("Provide the only file with peaks.")
+    stop("Provide the only file with peaks.")
   }
 
   peak_filename = acceptable_peak_files[existing_peak_files][1]

@@ -27,9 +27,9 @@ find_mounted_assembly <- function() {
   # existing_motif_files = file.exists(acceptable_motif_files)
 
   # if (sum(existing_motif_files) == 0) {
-  #   simpleError("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
+  #   stop("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
   # } else if (sum(existing_motif_files) > 1) {
-  #   simpleError("Provide the only file with positional frequencies/counts matrix")
+  #   stop("Provide the only file with positional frequencies/counts matrix")
   # }
 
   # motif_filename = acceptable_motif_files[existing_motif_files][1]
@@ -48,11 +48,11 @@ find_mounted_assembly <- function() {
       assembly_fasta_fn = "/assembly.fa"
       assembly_sizes_fn = "/assembly.chrom.sizes"
     } else {
-      simpleError("Mount /assembly.fa file (also /assembly.chrom.sizes and /assembly.fa.fai not to recalculate them)")
+      stop("Mount /assembly.fa file (also /assembly.chrom.sizes and /assembly.fa.fai not to recalculate them)")
     }
   }
   if (!file.exists(assembly_fasta_fn)) {
-    simpleError(paste("Assembly at", assembly_fasta_fn, "not found"))
+    stop(paste("Assembly at", assembly_fasta_fn, "not found"))
   }
 
 }
@@ -87,6 +87,6 @@ get_ppm <- function(filename, format) {
   } else if (format == 'ppm') {
     return(filename)
   } else {
-    simpleError("Unknown motif format")
+    stop("Unknown motif format")
   }
 }

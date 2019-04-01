@@ -48,16 +48,16 @@ dummy = obtain_and_preprocess_peaks(opts)
 
 if (dir.exists("/assembly")) {
   assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
-  assembly_sizes_fn = file.path("/assembly", paste(opts$assembly_name, ".sizes", sep=""))
+  assembly_sizes_fn = file.path("/assembly", paste0(opts$assembly_name, ".sizes"))
   if (!file.exists(assembly_fasta_fn)) {
-    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", file.path("/assembly/", opts$assembly_name.fa)))
+    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", shQuote(file.path("/assembly/", opts$assembly_name.fa))))
   }
 } else{
   if (file.exists("/assembly.fa")) {
     assembly_fasta_fn = "/assembly.fa"
     assembly_sizes_fn = "/assembly.chrom.sizes"
   } else {
-    simpleError("Mount /assembly.fa file (also /assembly.chrom.sizes and /assembly.fa.fai not to recalculate them)")
+    stop("Mount /assembly.fa file (also /assembly.chrom.sizes and /assembly.fa.fai not to recalculate them)")
   }
 }
 

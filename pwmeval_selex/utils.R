@@ -17,6 +17,6 @@ decompress_file <- function(filename, compression) {
     system(paste("gzip -cd", filename, " > ", shQuote(tmp_fn)))
     return(tmp_fn)
   } else {
-    simpleError("Unknown compression format")
+    stop("Unknown compression format")
   }
 }
