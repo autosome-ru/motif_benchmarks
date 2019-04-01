@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/usr/bin/env sh
 set -e -u -o pipefail
 ASSEMBLY_NAME=$1
 mkdir -p /tmp/assembly_${ASSEMBLY_NAME}/

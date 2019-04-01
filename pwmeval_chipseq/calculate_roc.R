@@ -20,7 +20,7 @@ height = 800
 pointsize = 20
 
 option_list = list(
-  make_option(c("--assembly-name"), dest= 'assembly_name', type='character', default=NA, help="Choose assembly by name"),
+  make_option(c("--assembly-name"), dest='assembly_name', action="store", type='character', default=NA, help="Choose assembly by name"),
   make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
   make_option(c("--peaks-url"), dest= 'peaks_url', type='character', default=NA, help="Use peaks file located at some URL"),
 
@@ -47,10 +47,13 @@ dummy = obtain_and_preprocess_motif(opts)
 dummy = obtain_and_preprocess_peaks(opts)
 
 if (dir.exists("/assembly")) {
-  assembly_fasta_fn = file.path("/assembly", opts$assembly_name)
+  if (is.na(opts$assembly_name)) {
+    stop("Error! Specify assembly name")
+  }
+  assembly_fasta_fn = file.path("/assembly", paste0(opts$assembly_name, ".fa"))
   assembly_sizes_fn = file.path("/assembly", paste0(opts$assembly_name, ".sizes"))
   if (!file.exists(assembly_fasta_fn)) {
-    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", shQuote(file.path("/assembly/", opts$assembly_name.fa))))
+    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", shQuote(assembly_fasta_fn)))
   }
 } else{
   if (file.exists("/assembly.fa")) {
@@ -67,10 +70,10 @@ if (!file.exists(assembly_sizes_fn)) {
 }
 
 system(paste("sort -k5,5nr /workdir/peak_centers_scored.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
-system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.chrom.sizes -l 124 -r 125  > /workdir/positive_peaks.bed")
-system("/app/bedtools slop -i /workdir/top_peaks.bed -g /assembly.chrom.sizes -l -301 -r 550  > /workdir/negative_peaks.bed")
-system("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi /assembly.fa  > /workdir/positive.seq")
-system("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi /assembly.fa  > /workdir/negative.seq")
+system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly_sizes_fn), " -l 124 -r 125  > /workdir/positive_peaks.bed"))
+system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly_sizes_fn), " -l -301 -r 550  > /workdir/negative_peaks.bed"))
+system(paste("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi ", shQuote(assembly_fasta_fn), "  > /workdir/positive.seq"))
+system(paste("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi ", shQuote(assembly_fasta_fn), "  > /workdir/negative.seq"))
 
 system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/positive.seq  > /workdir/positive_PWM.out")
 system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/negative.seq  > /workdir/negative_PWM.out")
