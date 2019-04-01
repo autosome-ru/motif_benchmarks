@@ -53,7 +53,7 @@ if (dir.exists("/assembly")) {
   assembly_fasta_fn = file.path("/assembly", paste0(opts$assembly_name, ".fa"))
   assembly_sizes_fn = file.path("/assembly", paste0(opts$assembly_name, ".sizes"))
   if (!file.exists(assembly_fasta_fn)) {
-    system(paste("/app/download_assembly.sh", opts$assembly_name, " > ", shQuote(assembly_fasta_fn)))
+    system(paste("/app/download_assembly.sh", opts$assembly_name, shQuote(assembly_fasta_fn)))
   }
 } else{
   if (file.exists("/assembly.fa")) {
