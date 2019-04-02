@@ -67,7 +67,7 @@ pointsize = 20
 
 option_list = list(
   make_option(c("--seq-url"), dest= 'seq_url', type='character', default=NA, help="Use FASTA file located at some URL"),
-  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
+  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PFM file located at some URL"),
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
@@ -80,7 +80,7 @@ option_list = list(
   make_option(c("--fastq"), dest='seq_format_fastq', default=FALSE, action="store_true", help="Use FASTQ"),
   make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
   
-  make_option(c("--ppm"), default=FALSE, action="store_true", help="Force use of PPM matrix"),
+  make_option(c("--pfm"), default=FALSE, action="store_true", help="Force use of PFM matrix"),
   make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
 
   make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
@@ -89,24 +89,25 @@ option_list = list(
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
-  make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PPM) [default=%default]")
+  make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PFM) [default=%default]")
 )
 usage = paste("\n",
-              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
+              "docker run --rm  -v {PFM}:/motif.pfm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
               "  or\n",
-              "docker run --rm  -v {PPM}:/motif.ppm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  -v {results}:/results  pwmeval_selex [options]\n",
+              "docker run --rm  -v {PFM}:/motif.pfm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  -v {results}:/results  pwmeval_selex --plot --roc [options]\n",
               " or\n",
               "docker run --rm  pwmeval_selex --motif-url {Motif URL} --seq-url {Selex FASTA URL} [options]\n")
 description = paste("\n",
                     "Note!\n",
-                    "  All local paths (for FASTA file, PPM file and results folder) should be absolute.\n",
-                    "  Sequences format can be derived from extension.\n",
+                    "  All local paths (for FASTA file, PFM file and results folder) should be absolute.\n",
+                    "  Sequences and motif format can be derived from extension.\n",
+                    "  You can use pcm extension for positional count matrices and pfm/pfm for frequency matrices.\n",
                     "  You can use fa/fasta extensions for FASTA files and fq/fastq for FASTQ files.\n",
                     "  Also you can use gz extension for gzipped sequences.\n",
                     "  So that /seq.fastq.gz is a correct way to pass a gzipped FASTQ file.\n",
-                    "  Options like --fasta/--fastq, --gz/--not-compressed override derived format,\n",
-                    "  what is especially useful for passing sequences via url.\n",
-                    "  In case when format is specified via options `/seq` with extension omitted can be used.\n")
+                    "  Options like --fa/--fq, --gz/--not-compressed, --pcm/--pfm override derived format,\n",
+                    "  what is especially useful for passing data via url.\n",
+                    "  In case when format is specified via options, `/seq` and `/motif` with extension omitted can be used.\n")
 opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
 opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
@@ -120,11 +121,11 @@ if (is.na(opts$seed)) {
 } else {
   system(paste("/app/seqshuffle -s", opts$seed, "/workdir/positive.fa > /workdir/negative.fa"))
 }
-system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/positive.fa  > /workdir/PPM_scores_positive.txt"))
-system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.ppm /workdir/negative.fa  > /workdir/PPM_scores_negative.txt"))
+system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/positive.fa  > /workdir/PFM_scores_positive.txt"))
+system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/negative.fa  > /workdir/PFM_scores_negative.txt"))
 
-POS <- log10(as.numeric(read.table("/workdir/PPM_scores_positive.txt", header=F)[,1]))
-NEG <- log10(as.numeric(read.table("/workdir/PPM_scores_negative.txt", header=F)[,1]))
+POS <- log10(as.numeric(read.table("/workdir/PFM_scores_positive.txt", header=F)[,1]))
+NEG <- log10(as.numeric(read.table("/workdir/PFM_scores_negative.txt", header=F)[,1]))
 
 roc_data <- auc_approx(POS, NEG, opts$top_fraction, opts$num_bins)
 if (opts$plot_image) {

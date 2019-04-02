@@ -21,10 +21,10 @@ pointsize = 20
 
 option_list = list(
   make_option(c("--assembly-name"), dest='assembly_name', action="store", type='character', default=NA, help="Choose assembly by name"),
-  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PPM file located at some URL"),
+  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PFM file located at some URL"),
   make_option(c("--peaks-url"), dest= 'peaks_url', type='character', default=NA, help="Use peaks file located at some URL"),
 
-  make_option(c("--ppm"), default=FALSE, action="store_true", help="Force use of PPM matrix"),
+  make_option(c("--pfm"), default=FALSE, action="store_true", help="Force use of PFM matrix"),
   make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
 
   make_option(c("--narrowPeak"), dest='peak_format_narrowPeak', default=FALSE, action="store_true", help="Peaks are formatted in narrowPeak (peaks are reshaped into constant-size peaks around summit of a peak)"),
@@ -37,46 +37,50 @@ option_list = list(
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
   make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]")
 )
+usage = paste("\n",
+              "docker run --rm  -v {PFM}:/motif.pfm  -v {Peaks}:/peaks[.bed|.narrowPeak][.gz] -v {assembly folder}:/assembly/ pwmeval_chipseq --assembly-name {UCSC assembly name} [options]\n",
+              "  or\n",
+              "docker run --rm  -v {PFM}:/motif.pfm  -v {Peaks}:/peaks[.bed|.narrowPeak][.gz] -v {assembly folder}:/assembly/ -v {results}:/results  pwmeval_chipseq --plot --roc [options]\n",
+              "  or\n",
+              "docker run --rm  -v {assembly FASTA}:/assembly.fa -v {assembly chrom-sizes}:/assembly.chrom.sizes -v {assembly FASTA index}:/assembly.fa.fai  pwmeval_chipseq --motif-url {Motif URL} --peaks-url {Peaks URL} [options]\n",
+              " or\n",
+              "docker run --rm pwmeval_chipseq --motif-url {Motif URL} --peaks-url {Peaks URL} --assembly-name {UCSC assembly name} [options]\n")
 
-opt_parser <- OptionParser(option_list=option_list);
+description = paste("\n",
+                    "Note!\n",
+                    "  All local paths (for peaks file, PFM file, assembly folder and results folder) should be absolute.\n",
+                    "  Peaks and motif format can be derived from extension.\n",
+                    "  You can use bed/narrowPeak extensions for peaks files.\n",
+                    "  Also you can use gz extension for gzipped peaks.\n",
+                    "  So that /peaks.narrowPeak.gz is a correct way to pass a gzipped narrowPeak file.\n",
+                    "  Options like --bed/--narrowPeak, --gz/--not-compressed, --pcm/--pfm override derived format,\n",
+                    "  what is especially useful for passing data via url.\n",
+                    "  In case when format is specified via options, `/peaks` and `/motif` with extension omitted can be used.\n",
+                    "\n",
+                    "  Assembly can be passed as separate files (FASTA, its index and chromosome sizes),\n",
+                    "  or as a folder /assembly with necessary files and assembly name specified. If some of necessary files\n",
+                    "  don't exists, they are calculated on the fly and are stored into /assembly folder.\n",
+                    "  If the folder is mounted to a file system, an assembly and all supplementary files\n",
+                    "  will be stored for reuse in the following runs (first time it'll be slow).\n",
+                    "  --assembly-name [hg38/mm9/...] allows one to choose a necessary genome assembly amongst several ones.\n",
+                    "  If specified assembly doesn't exist in a specified folder, it will be downloaded from UCSC.")
+opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
 opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
 dummy = obtain_and_preprocess_motif(opts)
 dummy = obtain_and_preprocess_peaks(opts)
-
-if (dir.exists("/assembly")) {
-  if (is.na(opts$assembly_name)) {
-    stop("Error! Specify assembly name")
-  }
-  assembly_fasta_fn = file.path("/assembly", paste0(opts$assembly_name, ".fa"))
-  assembly_sizes_fn = file.path("/assembly", paste0(opts$assembly_name, ".sizes"))
-  if (!file.exists(assembly_fasta_fn)) {
-    system(paste("/app/download_assembly.sh", opts$assembly_name, shQuote(assembly_fasta_fn)))
-  }
-} else{
-  if (file.exists("/assembly.fa")) {
-    assembly_fasta_fn = "/assembly.fa"
-    assembly_sizes_fn = "/assembly.chrom.sizes"
-  } else {
-    stop("Mount /assembly.fa file (also /assembly.chrom.sizes and /assembly.fa.fai not to recalculate them)")
-  }
-}
-
-if (!file.exists(assembly_sizes_fn)) {
-  writeLines(paste("Chromosome sizes file", assembly_sizes_fn, "not found, generating..."), con=stderr())
-  system(paste("/app/chrom_sizes", shQuote(assembly_fasta_fn), " > ", shQuote(assembly_sizes_fn)))
-}
+assembly = obtain_and_preprocess_assembly(opts)
 
 system(paste("sort -k5,5nr /workdir/peak_centers_scored.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
-system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly_sizes_fn), " -l 124 -r 125  > /workdir/positive_peaks.bed"))
-system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly_sizes_fn), " -l -301 -r 550  > /workdir/negative_peaks.bed"))
-system(paste("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi ", shQuote(assembly_fasta_fn), "  > /workdir/positive.seq"))
-system(paste("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi ", shQuote(assembly_fasta_fn), "  > /workdir/negative.seq"))
+system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l 124 -r 125  > /workdir/positive_peaks.bed"))
+system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l -301 -r 550  > /workdir/negative_peaks.bed"))
+system(paste("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/positive.seq"))
+system(paste("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/negative.seq"))
 
-system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/positive.seq  > /workdir/positive_PWM.out")
-system("/app/pwm_scoring -r -u -m /workdir/motif.ppm /workdir/negative.seq  > /workdir/negative_PWM.out")
+system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/positive.seq  > /workdir/positive_PWM.out")
+system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/negative.seq  > /workdir/negative_PWM.out")
 
 pos <- as.matrix(read.table("/workdir/positive_PWM.out"))
 neg <- as.matrix(read.table("/workdir/negative_PWM.out"))
