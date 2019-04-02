@@ -12,5 +12,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
     && apk del .builddeps
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2ppm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R  /app/
+COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]

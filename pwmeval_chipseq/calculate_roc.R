@@ -6,6 +6,7 @@ suppressPackageStartupMessages(library('pROC'))
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
 source('/app/peak_preprocessing.R')
+source('/app/assembly_preprocessing.R')
 
 plot_roc <- function(roc_data, image_filename, width = 800, height = 800, pointsize = 20) {
   png(image_filename, width = width, height = height, pointsize = pointsize)
@@ -63,7 +64,8 @@ description = paste("\n",
                     "  If the folder is mounted to a file system, an assembly and all supplementary files\n",
                     "  will be stored for reuse in the following runs (first time it'll be slow).\n",
                     "  --assembly-name [hg38/mm9/...] allows one to choose a necessary genome assembly amongst several ones.\n",
-                    "  If specified assembly doesn't exist in a specified folder, it will be downloaded from UCSC.")
+                    "  If specified assembly doesn't exist in a specified folder, it will be automatically downloaded from UCSC (not always possible).\n",
+                    "  But one should note that if /assembly folder not mounted, genome and supplementary data will live only during container existence")
 opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
 opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]

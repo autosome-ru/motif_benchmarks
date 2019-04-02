@@ -19,5 +19,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
     && apk del .builddeps
 RUN apk add rsync
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./pcm2ppm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh /app/
+COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh /app/
 ENTRYPOINT ["/app/calculate_roc.R"]
