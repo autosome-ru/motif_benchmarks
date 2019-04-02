@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+library('rjson')
 library('optparse')
 library('MASS')
 library('caTools')
@@ -13,7 +14,36 @@ plot_roc <- function(roc_data, image_filename, width = 800, height = 800, points
   plot(roc_data, main="ROC curve of motif predictor", col = "red", lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
   txt <- paste("AUC = ", roc_data$auc, sept="")
   legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
-  dev.off()
+  dummy <- dev.off()
+}
+
+roc_tpr_fpr <- function(roc_infos) {
+  roc_coords <- coords(roc_infos, 'all', as.list=TRUE, ret=c("sensitivity", "1-specificity"))
+  n_points <- length(roc_coords)
+  tpr <- list()
+  fpr <- list()
+  for(i in 1:n_points) {
+    tpr[[i]] <- roc_coords[[i]]$sensitivity
+    fpr[[i]] <- roc_coords[[i]]$"1-specificity"
+  }
+  return(list(tpr=unlist(tpr), fpr=unlist(fpr)))
+}
+
+roc_curve_as_points_list <- function(tpr, fpr) {
+  n_bins <- length(tpr)
+  roc_curve <- list()
+  for(i in 1:n_bins) {
+    roc_curve[[i]] <- list(tpr=tpr[[i]], fpr=fpr[[i]])
+  }
+  return(roc_curve)
+}
+
+store_roc <- function(roc_data, output_filename) {
+  print(names(roc_data))
+  print(class(roc_data$tpr))
+  print(class(roc_data$tpr))
+  print(class(roc_data$fpr))
+  write.table(list(tpr=roc_data$tpr, fpr=roc_data$fpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
 }
 
 width = 800
@@ -36,6 +66,10 @@ option_list = list(
 
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
+  make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
+  make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+  make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file"),
+
   make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]")
 )
 usage = paste("\n",
@@ -93,10 +127,23 @@ neg_labs <- rep(0, 500)
 pos <- cbind(pos, pos_labs)
 neg <- cbind(neg, neg_labs)
 comb_sets <- rbind(pos, neg)
-roc_data <- roc(response = comb_sets[, 2], predictor = comb_sets[, 1])
-auc = as.numeric(roc_data$auc) # by default auc is a complex object which is displayed not as a number but number + text
-writeLines(as.character(auc))
+roc_infos <- roc(response = comb_sets[, 2], predictor = comb_sets[, 1])
+auc = as.numeric(roc_infos$auc) # by default auc is a complex object which is displayed not as a number but number + text
+roc_data <- roc_tpr_fpr(roc_infos)
+
+if (opts$store_roc) {
+  store_roc(roc_data, file.path('/results', opts$roc_filename))
+}
 
 if (opts$plot_image) {
-  plot_roc(roc_data, opts$image_filename, width = width, height = height, pointsize = pointsize)
+  plot_roc(roc_infos, opts$image_filename, width = width, height = height, pointsize = pointsize)
+}
+
+if (opts$jsonify_results) {
+  metrics <- list(roc_auc=auc)
+  supplementary <- list(roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr))
+  results <- list(metrics=metrics, supplementary=supplementary)
+  writeLines(toJSON(results))
+} else{
+  writeLines(as.character(auc))
 }
