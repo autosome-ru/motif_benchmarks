@@ -18,7 +18,7 @@ print_matrix <- function(matrix) {
   }
 }
 
-pcm2ppm <- function(pcm) {
+pcm2pfm <- function(pcm) {
   return(lapply(pcm, function(row){row / sum(row)}))
 }
 
@@ -41,5 +41,5 @@ if (has_header) {
   pcm <- parse_matrix(lines)
 }
 
-ppm <- pcm2ppm(pcm)
-print_matrix(ppm)
+pfm <- pcm2pfm(pcm)
+print_matrix(pfm)
