@@ -39,10 +39,6 @@ roc_curve_as_points_list <- function(tpr, fpr) {
 }
 
 store_roc <- function(roc_data, output_filename) {
-  print(names(roc_data))
-  print(class(roc_data$tpr))
-  print(class(roc_data$tpr))
-  print(class(roc_data$fpr))
   write.table(list(tpr=roc_data$tpr, fpr=roc_data$fpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
 }
 
