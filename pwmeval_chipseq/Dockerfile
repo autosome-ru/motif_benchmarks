@@ -14,10 +14,10 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
      && mkdir -p /app && cd /app \
      && cp /bedtools/bedtools2/bin/bedtools /app/bedtools \
      && rm -r /bedtools \
-    && apk add R  ttf-ubuntu-font-family \
+    && apk add R  ttf-ubuntu-font-family rsync \
     && Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"), repos = "https://cloud.r-project.org/")' \
-    && apk del .builddeps
-RUN apk add rsync
+    && apk del .builddeps \
+    && rm -rf /var/cache/apk/*
 WORKDIR /workdir/
 COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh /app/
 ENTRYPOINT ["/app/calculate_roc.R"]

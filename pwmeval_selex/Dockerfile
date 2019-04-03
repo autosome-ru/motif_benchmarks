@@ -10,7 +10,8 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
      && g++ -O3 -W -Wall -pedantic /source/filter_fasta.cpp -o /app/filter_fasta \
      && rm /source/pwm_scoring.c /source/seqshuffle.c \
     && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
-    && apk del .builddeps
+    && apk del .builddeps \
+    && rm -rf /var/cache/apk/*
 WORKDIR /workdir/
 COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]
