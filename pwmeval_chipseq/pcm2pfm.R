@@ -5,7 +5,8 @@ str_is_numeric <- function(str) {
 }
 
 is_matrix_row <- function(str) {
-  return(all(str_is_numeric(strsplit(str, '\\s+'))))
+  terms <- unlist(strsplit(str, '\\s+'))
+  return(all(str_is_numeric(terms)))
 }
 
 parse_matrix <- function(lines) {
