@@ -6,7 +6,8 @@ docker pull vorontsovie/pwmeval_chipseq
 
 To run these benchmarks one should supply data files either by mounting local files into container predefined path, or by specifying URL to download these files. As a result they report ROC AUC at stdout. There're configuration options to return resulting metrics in json format instead of single number (also printed to stdout) and to produce ROC curve plot and coordinates of ROC curve points (FPR and TPR at different thresholds) in separate files.
 
-=== Benchmark using SELEX data ===
+## Benchmark using SELEX data
+
 In order to benchmark a motif on SELEX one has to specify a motif itself (positional frequency matrix) and a file with sequences obtained from a SELEX experiment (positive samples).
 A motif can be given as a positional count matrix (with .pcm extension) or as a frequency matrix (with .pfm or .ppm extension). By default tool tries to guess matrix type from its extension, if an extension doesn't tell us meaningful information about a matrix type, frequency matrix is supposed. It's also possible to force usage of certain type by specifying options `--pcm/--pfm`.
 Note that name and extension of a file in a local file system are not taken into account, only name of a mount point does matter.
@@ -69,7 +70,7 @@ Option `--pseudo-weight W` specifies a pseudoweight to be added to a PFM. Defaul
 
 As negative control data is obtained by random shuffling of a list of positive samples, metrics can differ a bit from run to run. In order to get randomness out, one can specify random number generator seeding value with a `--seed INT` option.
 
-=== Benchmark using ChIP-seq data ===
+## Benchmark using ChIP-seq data
 ChIP-seq benchmark needs three types of files to run: motif itself (also positional frequency matrix), list of ChIP-seq peaks with scores in BED or narrowPeak format, and a genome assembly in a single FASTA file.
 
 Motif is specified exactly the same way as it's specified in a SELEX benchmark.
