@@ -1,8 +1,10 @@
 Here I present two containerized benchmarks (vorontsovie/pwmeval_selex and vorontsovie/pwmeval_chipseq) which can be used to benchmark positional frequency matrices on SELEX datasets and on ChIP-seq datasets. In order to run a container one need only a docker installed.
 
 To get the last version of benchmarks one should invoke
+```
 docker pull vorontsovie/pwmeval_selex
 docker pull vorontsovie/pwmeval_chipseq
+```
 
 To run these benchmarks one should supply data files either by mounting local files into container predefined path, or by specifying URL to download these files. As a result they report ROC AUC at stdout. There're configuration options to return resulting metrics in json format instead of single number (also printed to stdout) and to produce ROC curve plot and coordinates of ROC curve points (FPR and TPR at different thresholds) in separate files.
 
