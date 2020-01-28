@@ -1,6 +1,11 @@
 Benchmark of PBM data from Jan Grau.
 
-Motif format:
+How to run benchmark:
+```
+docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmeval_pbm /data/pbm_data.txt /data/motif.mat
+```
+
+Motif format (`motif.mat`):
 ```
 >AHR_HUMAN.H11MO.0.B
 0.26314477735061276	0.11859745819448689	0.36641340309888065	0.25184436135601973
@@ -14,7 +19,7 @@ Motif format:
 0.279810224889837	0.43437346977265195	0.10496230952256	0.180853995814951
 ```
 
-PBM data format:
+PBM data format (`pbm_data.txt`):
 ```
 370241.822966	GAACAATGTAAATTATTGAAAGGGCTAATTCAATTAGTCTGTGTTCCGTTGTCCGTGCTG
 365545.496066	GATAACCGACGCCCATTAATTATATTAGCATTGAGCGTCTGTGTTCCGTTGTCCGTGCTG
