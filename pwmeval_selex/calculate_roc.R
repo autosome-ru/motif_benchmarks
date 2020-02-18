@@ -86,6 +86,9 @@ option_list = list(
   make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
   make_option(c("--allow-iupac"), dest="allow_iupac", default=FALSE, action="store_true", help="Allow IUPAC sequences (by default only ACGT are valid)."),
   make_option(c("--non-redundant"), dest="non_redundant", default=FALSE, action="store_true", help="Retain only unique sequences."),
+  make_option(c("--flank-5"), dest="flank_5", type='character', default='', help="Append 5'-flanking sequence (adapter+barcode) to sequences"),
+  make_option(c("--flank-3"), dest="flank_3", type='character', default='', help="Append 3'-flanking sequence (adapter+barcode) to sequences"),
+
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
@@ -114,13 +117,21 @@ opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
 dummy = obtain_and_preprocess_motif(opts)
-dummy = obtain_and_preprocess_sequences(opts)
+
+pos_seq_fn = obtain_and_preprocess_sequences(opts)
+neg_seq_fn = tempfile()
 
 if (is.na(opts$seed)) {
-  system(paste("/app/seqshuffle /workdir/positive.fa > /workdir/negative.fa"))
+  system(paste("/app/seqshuffle", shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
 } else {
-  system(paste("/app/seqshuffle -s", opts$seed, "/workdir/positive.fa > /workdir/negative.fa"))
+  system(paste("/app/seqshuffle -s", opts$seed, shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
 }
+
+pos_seq_fn = append_flanks(pos_seq_fn, opts)
+neg_seq_fn = append_flanks(neg_seq_fn, opts)
+dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
+dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
+
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/positive.fa  > /workdir/PFM_scores_positive.txt"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/negative.fa  > /workdir/PFM_scores_negative.txt"))
 

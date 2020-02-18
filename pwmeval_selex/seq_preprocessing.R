@@ -82,6 +82,16 @@ filter_redundant <- function(seq_filename, opts) {
   }
 }
 
+append_flanks <- function(seq_filename, opts) {
+  if (nchar(opts$flank_5) + nchar(opts$flank_3) > 0) {
+    tmp_fn = tempfile()
+    system(paste("/app/add_flanks.sh", shQuote(seq_filename), shQuote(opts$flank_5), shQuote(opts$flank_3), " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    return(seq_filename)
+  }
+}
+
 find_mounted_sequences_file <- function() {
   fasta_files = c('/seq.fasta', '/seq.fa', '/seq.fasta.gz', '/seq.fa.gz')
   fastq_files = c('/seq.fastq', '/seq.fq', '/seq.fastq.gz', '/seq.fq.gz')
@@ -114,5 +124,5 @@ obtain_and_preprocess_sequences <- function(opts) {
   seq_filename = convert2fasta(seq_filename, seq_format_info$seq_format)
   seq_filename = filter_fasta(seq_filename, opts)
   seq_filename = filter_redundant(seq_filename, opts)
-  file.copy(seq_filename, "/workdir/positive.fa")
+  return(seq_filename)
 }

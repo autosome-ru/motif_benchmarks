@@ -13,5 +13,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && apk del .builddeps \
     && rm -rf /var/cache/apk/*
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R  /app/
+COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R ./add_flanks.sh  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]
