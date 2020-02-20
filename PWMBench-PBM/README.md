@@ -1,8 +1,12 @@
-Benchmark of PBM data from Jan Grau.
+# PWMBench-PBM
+
+Benchmark of PBM data developed by Jan Grau. Based on [jstacs](http://www.jstacs.de/index.php/Main_Page) project.
+
+## Instructions
 
 How to run benchmark:
 ```
-docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmeval_pbm /data/pbm_data.txt /data/motif.mat
+docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmbench_pbm /data/pbm_data.txt /data/motif.mat
 ```
 
 Motif format (`motif.mat`):
@@ -25,6 +29,6 @@ PBM data format (`pbm_data.txt`):
 365545.496066	GATAACCGACGCCCATTAATTATATTAGCATTGAGCGTCTGTGTTCCGTTGTCCGTGCTG
 353259.608349	ATTGATTGATGGCTAACTAAATTAAGCGCATGGAGGGTCTGTGTTCCGTTGTCCGTGCTG
 347894.963074	CGTCTATTTTCGGGTAATTATCTCATAATGAGGTGGGTCTGTGTTCCGTTGTCCGTGCTG
-334081.174145	GATGCTCCGGATTATTAAGTAATTAAATGAGTTTCCGTCTGTGTTCCGTTGTCCGTGC
+334081.174145	GATGCTCCGGATTATTAAGTAATTAAATGAGTTTCCGTCTGTGTTCCGTTGTCCGTGCTG
 ...
 ```

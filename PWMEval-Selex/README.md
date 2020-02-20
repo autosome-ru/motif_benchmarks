@@ -1,17 +1,14 @@
-Here I present two containerized benchmarks (vorontsovie/pwmeval_selex and vorontsovie/pwmeval_chipseq) which can be used to benchmark positional frequency matrices on SELEX datasets and on ChIP-seq datasets. In order to run a container one need only a docker installed.
+# PWMEval-Selex
 
-To get the last version of benchmarks one should invoke
-```
-docker pull vorontsovie/pwmeval_selex
-docker pull vorontsovie/pwmeval_chipseq
-```
+In order to benchmark a motif against SELEX dataset one has to specify a motif itself (positional frequency matrix) and a file with sequences obtained from a SELEX experiment (positive samples).
 
-To run these benchmarks one should supply data files either by mounting local files into container predefined path, or by specifying URL to download these files. As a result they report ROC AUC at stdout. There're configuration options to return resulting metrics in json format instead of single number (also printed to stdout) and to produce ROC curve plot and coordinates of ROC curve points (FPR and TPR at different thresholds) in separate files.
+To run these benchmarks one should supply data files either by mounting local files into container predefined path, or by specifying URL to download these files. As a result it reports ROC AUC at stdout. There are configuration options to return resulting metrics in json format instead of single number (also printed to stdout) and to produce ROC curve plot and coordinates of ROC curve points (FPR and TPR at different thresholds) in separate files.
 
-## Benchmark using SELEX data
 
-In order to benchmark a motif on SELEX one has to specify a motif itself (positional frequency matrix) and a file with sequences obtained from a SELEX experiment (positive samples).
+## Motif format
+
 A motif can be given as a positional count matrix (with .pcm extension) or as a frequency matrix (with .pfm or .ppm extension). By default tool tries to guess matrix type from its extension, if an extension doesn't tell us meaningful information about a matrix type, frequency matrix is supposed. It's also possible to force usage of certain type by specifying options `--pcm/--pfm`.
+
 Note that name and extension of a file in a local file system are not taken into account, only name of a mount point does matter.
 There're several mount points at which benchmark will try to find a matrix: `/motif[.pfm|.ppm|.pcm]`. Square brackets mean that an extension can be omitted.
 For example lets pass a file into a container with an option `-v` (mount a volume):
@@ -26,17 +23,18 @@ docker run [docker options] vorontsovie/pwmeval_selex --motif-url 'http://hocomo
 
 Matrix format is a very simple plain text 4-column matrix (ACGT-ordered):
 ```
-	[> optional header]
-	1st position counts or probabilities in order A, C, G, T (as columns)
-	2nd position
-	...
+    [> optional header]
+    1st position counts or probabilities in order A, C, G, T (as columns)
+    2nd position
+    ...
 ```
+
+## Sequences format
 
 SELEX sequences also can be passed by mounting them to one of `/seq[.fasta|.fa|.fastq|.fq][.gz]`
 As one can guess, a tool accepts FASTA (.fasta and .fa extensions) and FASTQ files (.fastq and .fq extensions). Default format is FASTA. Sequences can be gzipped (it's derived from .gz extension). To override guessed format one can use `--fasta/--fastq` options in combination with `--gz/--not-compressed` options. To pass sequences via URL use `--seq-url` option.
 
 Let's now run a complete example with passing everything by URL:
-
 ```
 docker run --rm vorontsovie/pwmeval_selex --seq-url 'ftp.sra.ebi.ac.uk/vol1/run/ERR194/ERR194820/NFKB2_TTCAAT20NGA_R_2.fastq.gz' --motif-url 'http://hocomoco11.autosome.ru/final_bundle/hocomoco11/full/HUMAN/mono/pcm/NFKB2_HUMAN.H11MO.0.B.pcm'
 ```
@@ -48,11 +46,9 @@ wget 'http://hocomoco11.autosome.ru/final_bundle/hocomoco11/full/HUMAN/mono/pcm/
 docker run --rm  -v $(pwd)/NFKB2_TTCAAT20NGA_R_2.fastq.gz:/seq.fq.gz  -v $(pwd)/NFKB2_HUMAN.H11MO.0.B.pcm:/motif.pcm vorontsovie/pwmeval_selex
 ```
 
-A docker option `--rm` means that we want to automatically remove a container after it finished its work. Note that these containers are not designed for reuse because names of files in different runs will clash! So there are no reasons not to use `--rm` option.
-
-`-v $(pwd)/filename:/filename/in/container` matra means that we want to take a file `filename` from current folder — which is returned by `$(pwd)` — and mount it to a `/filename/in/container` file inside a container. Note that we should specify absolute pathes both in local file system and inside a container.
-
 Also note that we mounted our file as `/seq.fq.gz` so that a benchmark know that we have a gzipped FASTQ file, and thus we don't need to specify it explicitly. Instead we could mount sequences to a `/seq` file and to specify `--gz --fastq` options.
+
+## Customization
 
 Now lets discuss some options to change benchmarking procedure and to provide more information.
 
@@ -72,22 +68,4 @@ Option `--pseudo-weight W` specifies a pseudoweight to be added to a PFM. Defaul
 
 As negative control data is obtained by random shuffling of a list of positive samples, metrics can differ a bit from run to run. In order to get randomness out, one can specify random number generator seeding value with a `--seed INT` option.
 
-## Benchmark using ChIP-seq data
-ChIP-seq benchmark needs three types of files to run: motif itself (also positional frequency matrix), list of ChIP-seq peaks with scores in BED or narrowPeak format, and a genome assembly in a single FASTA file.
-
-Motif is specified exactly the same way as it's specified in a SELEX benchmark.
-
-Peaks can be passed by mounting a file with peaks as `/peaks[.bed|.narrowPeak][.gz]` or by specifying a link `--peaks-url URL`. When format can't be derived by extension, it defaults to BED.
-All peaks are transformed to have a standard length, but BED peaks and narrowPeaks are transformed in a different way:
-* Peaks in BED format produce a symmetrical interval of constant length around peak center. The 5-th column is used as a peak score.
-* Peaks in narrowPeak format produce a symmetrical interval of constant length around peak summit (relative position of summit in an interval is specified in the 10-th column). The 7-th column is used as a peak score.
-One can specify peaks format explicitly using `--narrowPeak` or `--bed` options in combination with `--gz` and `--not-compressed`.
-
-To pass an assembly, one should specify an assembly name using `--assembly-name` option. Assembly name normally is a short UCSC identifier such as hg38. Not to download an assembly each time, it's highly recommended to mount a folder `/assembly` with files named smth like `hg38.fa`, `hg38.chrom.sizes`, `hg38.fa.fai`. Missing files will be downloaded and/or generated automatically — and stored in this folder — but that can be a time consuming process during the first run.
-It's not guaranted that a tool will successfully obtain an assembly from UCSC, in some cases you'd do this manually. Chromosome sizes and index always can be reconstructed from FASTA file, so you don't have to download them too.
-
-If you don't want to specify an assembly name, you can mount your assembly as `/assembly.fa` or `/assembly/assembly.fa` and a family (accordingly named files with an index and chromosome sizes). But note that supplementary files are only stored between runs if `/assembly` folder is mounted in a local file system? and names of supplementary files are derived from the name of assembly FASTA file (so assembly.fa will result in not very meaningful names like `assembly.fa.fai`  and `assembly.chrom.sizes`).
-
-Options `--plot` / `--plot-filename`, `--roc` / `--roc-filename` and `--json` work the same way as they do for `pwmeval_selex` benchmark.
-
-Option `--top` behaves differently from option with same name in `pwmeval_selex`. Here it indicates number of peaks which should be taken as a positive dataset, only best peaks (score is specified in bed/narrowPeak file, see details above) are taken into account.
+Options `--flank-5` and `-flank-3` concatenate 5' and 3' flanking sequences to provided sequences. It's reasonable to specify adapter and barcode sequences (e.g. 20bp from each side) as they can impact binding. These flanks are concatenated to control dataset after shuffling is done.
