@@ -1,0 +1,9 @@
+*.ppm
+*.pcm
+*.pwm
+*.mat
+*.gz
+*.fa
+*.fq
+*.fasta
+*.fastq
