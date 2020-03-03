@@ -1,4 +1,5 @@
 # PWMBench-PBM
+**Container name:** `vorontsovie/pwmbench_pbm`
 
 Benchmark of PBM data developed by Jan Grau. Based on [jstacs](http://www.jstacs.de/index.php/Main_Page) project.
 

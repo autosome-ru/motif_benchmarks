@@ -1,4 +1,5 @@
 # PWMEval-Selex
+**Container name:** `vorontsovie/pwmeval_selex`
 
 In order to benchmark a motif against SELEX dataset one has to specify a motif itself (positional frequency matrix) and a file with sequences obtained from a SELEX experiment (positive samples).
 

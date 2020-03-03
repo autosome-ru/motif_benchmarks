@@ -1,4 +1,5 @@
 # motif_pseudo_roc
+**Container name:** `vorontsovie/motif_pseudo_roc`
 
 Benchmark for evaluation of weight matrices (PWMs) based on ChIP-seq data (sequences). Control data is simulated based on PWM score distribution.
 

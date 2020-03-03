@@ -1,4 +1,5 @@
 # predictions_roc
+**Container name:** `vorontsovie/predictions_roc`
 
 Benchmark to compute basic metrics of binary classification problem given scores of objects in positive and negative classes. Origin of data doesn't matter, but scores should be supplied from outside.
 

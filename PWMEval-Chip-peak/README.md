@@ -1,4 +1,5 @@
 # PWMEval-Chip-peak
+**Container name:** `vorontsovie/pwmeval_chipseq`
 
 ChIP-seq benchmark needs three types of files to run: motif itself (positional frequency matrix), list of ChIP-seq peaks with scores in BED or narrowPeak format, and a genome assembly in a single FASTA file.
 
