@@ -1,4 +1,16 @@
 FROM alpine
+LABEL maintainer="vorontsov.i.e@gmail.com"
+ARG BUILD_DATE
+ARG BUILD_VERSION
+
+LABEL org.label-schema.schema-version="1.0"
+LABEL org.label-schema.build-date=$BUILD_DATE
+LABEL org.label-schema.name="PWMEval-Chip-Peak"
+LABEL org.label-schema.description="PWMEval-Chip-Peak benchmark motif performance to recognize ChIP-seq peaks"
+LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
+LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
+LABEL org.label-schema.version=$BUILD_VERSION
+
 COPY ./chrom_sizes.cpp /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev \
     && mkdir -p /app/ \
