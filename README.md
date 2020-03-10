@@ -1,4 +1,6 @@
 # TFBS-motifs benchmarks
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3695374.svg)](https://doi.org/10.5281/zenodo.3695374)
+
 Here we present several containerized benchmarks which can be used to assess performance of positional frequency matrices on ChIP-seq, SELEX and PBM datasets.
 
 More info can be found in dedicated sections.
