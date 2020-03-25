@@ -69,4 +69,4 @@ Option `--pseudo-weight W` specifies a pseudoweight to be added to a PFM. Defaul
 
 As negative control data is obtained by random shuffling of a list of positive samples, metrics can differ a bit from run to run. In order to get randomness out, one can specify random number generator seeding value with a `--seed INT` option.
 
-Options `--flank-5` and `-flank-3` concatenate 5' and 3' flanking sequences to provided sequences. It's reasonable to specify adapter and barcode sequences (e.g. 20bp from each side) as they can impact binding. These flanks are concatenated to control dataset after shuffling is done.
+Options `--flank-5` and `--flank-3` concatenate 5' and 3' flanking sequences to provided sequences. It's reasonable to specify adapter and barcode sequences (e.g. 20bp from each side) as they can impact binding. These flanks are concatenated to control dataset after shuffling is done.
