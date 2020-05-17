@@ -7,8 +7,14 @@ Benchmark of PBM data developed by Jan Grau. Based on [jstacs](http://www.jstacs
 
 How to run benchmark:
 ```
-docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmbench_pbm /data/pbm_data.txt /data/motif.mat
+docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmbench_pbm <LOG|EXP|ASIS> /data/pbm_data.txt /data/motif.mat
 ```
+
+LOG/EXP/ASIS corresponds to different transformation modes before correlation calculations.
+* LOG means log-transformation of probe intensities.
+* EXP means exp-transformation of motif scores.
+* ASIS means take intensities and motif scores as is.
+
 
 Motif format (`motif.mat`):
 ```
