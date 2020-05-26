@@ -7,14 +7,21 @@ Benchmark of PBM data developed by Jan Grau. Based on [jstacs](http://www.jstacs
 
 How to run benchmark:
 ```
-docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmbench_pbm <LOG|EXP|ASIS> /data/pbm_data.txt /data/motif.mat
+docker run --rm --mount type=bind,src=$(pwd),dst=/data vorontsovie/pwmbench_pbm <METRIC> /data/pbm_data.txt /data/motif.mat
 ```
 
-LOG/EXP/ASIS corresponds to different transformation modes before correlation calculations.
-* LOG means log-transformation of probe intensities.
-* EXP means exp-transformation of motif scores.
-* ASIS means take intensities and motif scores as is.
+METRIC corresponds to different metrics.
+* ASIS - correlation of intensity (taken as is) and log-sum-occupancy.
+* EXP - correlation of intensity and sum-occupancy.
+* LOG - correlation of log-intensity and log-sum-occupancy.
+* ROC - AUC ROC
+* PR - AUC PR
+* ROCLOG - AUC ROC in logarithmed intensities
+* PRLOG - AUC PR in logarithmed intensities
 
+Motif score is defined as sum-occupancy.
+
+Motif have to be positional frequency matrix. It's internally corrected with pseudocount of 0.0001.
 
 Motif format (`motif.mat`):
 ```
