@@ -56,107 +56,29 @@ public class PWMBench {
 	}
 
 
-	private static void parseMeme(String file, LinkedList<PFMWrapperTrainSM> models) throws NumberFormatException, IOException, CloneNotSupportedException{
-		BufferedReader reader = new BufferedReader( new FileReader(file) );
-
-		String str = null;
-
+	private static PFMWrapperTrainSM parsePlainMotif(String filename) throws NumberFormatException, IOException, CloneNotSupportedException {
+		BufferedReader reader = new BufferedReader( new FileReader(filename) );
 		LinkedList<double[]> pwm = new LinkedList<>();
+		String str = null;
 		String name = null;
-		boolean inPWM = false;
-
 		while( (str = reader.readLine()) != null ){
-			if(str.startsWith("MOTIF ")){
-				if(name != null){
-					PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
-					models.add(temp);
-				}
-				name = str.replaceAll("^MOTIF ", "");
-				pwm.clear();
-			}else if(str.startsWith("letter-probability")){
-				inPWM = true;
-			}else if(str.startsWith("URL") || str.trim().length()==0){
-				inPWM = false;
-			}else if(inPWM){
+			if (str.startsWith(">")) {
+				name = str.replaceAll(">", "").trim();
+			} else {
 				String[] parts = str.trim().split("\\s+");
 				double[] line = new double[parts.length];
-				if(line.length != 4){
+				if (line.length != 4) {
 					System.err.println(str);
 					throw new RuntimeException("Matrix rows should contain exactly 4 columns");
 				}
-				for(int i=0;i<line.length;i++){
+				for (int i = 0; i < line.length; i++) {
 					line[i] = Double.parseDouble(parts[i]);
 				}
 				pwm.add(line);
 			}
 		}
-
-		if(name != null){
-			PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 1E-4);
-			models.add(temp);
-
-		}
-
 		reader.close();
-	}
-
-
-
-	private static void parsePhilipp(String file, LinkedList<PFMWrapperTrainSM> models) throws NumberFormatException, IOException, CloneNotSupportedException{
-		BufferedReader reader = new BufferedReader( new FileReader(file) );
-
-		String str = null;
-
-		LinkedList<double[]> pwm = new LinkedList<>();
-		String name = null;
-
-		while( (str = reader.readLine()) != null ){
-			if(str.startsWith(">")){
-				if(name != null){
-					PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
-					models.add(temp);
-				}
-				name = str.replaceAll(">letter-probability matrix ", "").replaceAll(":.*", "");
-				pwm.clear();
-			}else{
-				String[] parts = str.trim().split("\\s+");
-				double[] line = new double[parts.length];
-				if(line.length != 4){
-					System.err.println(str);
-					throw new RuntimeException("Matrix rows should contain exactly 4 columns");
-				}
-				for(int i=0;i<line.length;i++){
-					line[i] = Double.parseDouble(parts[i]);
-				}
-				pwm.add(line);
-			}
-		}
-
-		if(name != null){
-			PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
-			models.add(temp);
-
-		}
-
-		reader.close();
-	}
-
-
-
-	private static LinkedList<PFMWrapperTrainSM> readModels(String... dFiles ) throws IOException, CloneNotSupportedException{
-
-		LinkedList<PFMWrapperTrainSM> models = new LinkedList<>();
-
-		for(String file:dFiles){
-			//parseMeme(file, models);
-			parsePhilipp(file, models);
-
-		}
-
-
-
-		return models;
-
+		return new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
 	}
 
 	private static int numCol(String str){
@@ -299,7 +221,6 @@ public class PWMBench {
 					vals[i] = Math.log(vals[i]-mi+1.0);
 				}
 			}
-
 			return ToolBox.pearsonCorrelation(vals, preds);
 		}
 	}
@@ -308,28 +229,8 @@ public class PWMBench {
 	public static void main(String[] args) throws Exception {
 		Scoring scoring = Scoring.valueOf(args[0]);
 		Entry entry = readData(args[1]);
-
-		int off = 2;
-
-		String[] sub = new String[args.length-off];
-		System.arraycopy(args, off, sub, 0, sub.length);
-
-		LinkedList<PFMWrapperTrainSM> models = readModels(sub);
-
-		Iterator<PFMWrapperTrainSM> modIt = models.iterator();
-
-		System.out.print("\t"+entry.file);
-
-		System.out.println();
-		while(modIt.hasNext()){
-			PFMWrapperTrainSM model = modIt.next();
-
-			System.out.print(model.getName());
-
-			double score = score(model, entry.data, entry.vals, scoring);
-			System.out.print("\t"+score);
-
-			System.out.println();
-		}
+		PFMWrapperTrainSM model = parsePlainMotif(args[2]);
+		double score = score(model, entry.data, entry.vals, scoring);
+		System.out.println(score);
 	}
 }
