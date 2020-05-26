@@ -45,21 +45,14 @@ public class PWMBench {
 	}
 
 	private static class Entry{
-
 		private DataSet data;
 		private double[] vals;
-		private String file;
 
-
-		public Entry(DataSet data, double[] vals, String file) {
+		public Entry(DataSet data, double[] vals) {
 			super();
 			this.data = data;
 			this.vals = vals;
-			this.file = file;
 		}
-
-
-
 	}
 
 
@@ -189,73 +182,44 @@ public class PWMBench {
 		return num;
 	}
 
-	private static LinkedList<Entry> readData(String dataDirOrFile) throws IOException, IllegalArgumentException, WrongAlphabetException, EmptyDataSetException{
 
-		Iterator<File> fit = null;
-		LinkedList<Entry> all = new LinkedList<>();
-		String dataDir = null;
+	private static Entry readData(String filename) throws IOException, IllegalArgumentException, WrongAlphabetException, EmptyDataSetException{
+		File dataFile = new File(filename);
+		if( !dataFile.isFile() ) {
+			throw new RuntimeException("Data should be a regular file");
+		}
+		BufferedReader reader = new BufferedReader(new FileReader(dataFile));
 
-		if( (new File(dataDirOrFile)).isDirectory() ) {
-			dataDir = dataDirOrFile;
+		DoubleList vals = new DoubleList();
+		LinkedList<Sequence> seqs = new LinkedList<>();
 
-			Stream<File> stream = Files.walk(Paths.get(dataDirOrFile)).filter(Files::isRegularFile).map(Path::toFile);
+		String str = reader.readLine();
 
-			fit = stream.iterator();
-
-		}else {
-			File dataFile = new File(dataDirOrFile);
-			dataDir = dataFile.getParent();
-			if(dataDir == null) {
-				dataDir = "";
-			}
-
-			LinkedList<File> li = new LinkedList<>();
-			li.add(dataFile);
-
-			fit = li.iterator();
+		int numCol = numCol(str);
+		if(numCol<0){
+			str = reader.readLine();
+			numCol = numCol(str);
+		}
+		if(numCol<0){
+			System.err.println(str);
+			throw new RuntimeException("Incorrect data format");
 		}
 
-		while( fit.hasNext() ){
-			File f = fit.next();
-			if(f.getAbsolutePath().endsWith(".txt")){
-
-				BufferedReader reader = new BufferedReader(new FileReader(f));
-
-				DoubleList vals = new DoubleList();
-				LinkedList<Sequence> seqs = new LinkedList<>();
-
-				String str = reader.readLine();
-
-				int numCol = numCol(str);
-				if(numCol<0){
-					str = reader.readLine();
-					numCol = numCol(str);
+		do{
+			if(str.trim().length()>0){
+				String[] parts = str.split("\\s+");
+				if(parts.length==2){
+					double val = Double.parseDouble(parts[numCol]);
+					Sequence seq = Sequence.create(DNAAlphabetContainer.SINGLETON, parts[1-numCol].trim());
+					vals.add(val);
+					seqs.add(seq);
 				}
-				if(numCol<0){
-					System.err.println(str);
-					throw new RuntimeException("Incorrect data format");
-				}
-
-				do{
-					if(str.trim().length()>0){
-						String[] parts = str.split("\\s+");
-						if(parts.length==2){
-							double val = Double.parseDouble(parts[numCol]);
-							Sequence seq = Sequence.create(DNAAlphabetContainer.SINGLETON, parts[1-numCol].trim());
-							vals.add(val);
-							seqs.add(seq);
-						}
-					}
-				}while( (str = reader.readLine()) != null );
-				all.add( new Entry( new DataSet("",seqs) , vals.toArray(), f.getAbsolutePath().replaceAll("^"+dataDir+"/?", "")) );
-
-				reader.close();
-
 			}
-		}
+		}while( (str = reader.readLine()) != null );
 
-		return all;
+		reader.close();
 
+		return new Entry(new DataSet("", seqs), vals.toArray());
 	}
 
 
@@ -342,10 +306,8 @@ public class PWMBench {
 
 
 	public static void main(String[] args) throws Exception {
-
 		Scoring scoring = Scoring.valueOf(args[0]);
-
-		LinkedList<Entry> data = readData(args[1]);
+		Entry entry = readData(args[1]);
 
 		int off = 2;
 
@@ -354,28 +316,19 @@ public class PWMBench {
 
 		LinkedList<PFMWrapperTrainSM> models = readModels(sub);
 
-
 		Iterator<PFMWrapperTrainSM> modIt = models.iterator();
 
-		Iterator<Entry> datIt = data.iterator();
+		System.out.print("\t"+entry.file);
 
-		while(datIt.hasNext()){
-			Entry en = datIt.next();
-			System.out.print("\t"+en.file);
-		}
 		System.out.println();
 		while(modIt.hasNext()){
 			PFMWrapperTrainSM model = modIt.next();
 
 			System.out.print(model.getName());
 
-			datIt = data.iterator();
+			double score = score(model, entry.data, entry.vals, scoring);
+			System.out.print("\t"+score);
 
-			while(datIt.hasNext()){
-				Entry en = datIt.next();
-				double score = score(model, en.data, en.vals, scoring);
-				System.out.print("\t"+score);
-			}
 			System.out.println();
 		}
 	}
