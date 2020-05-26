@@ -88,8 +88,8 @@ public class PWMBench {
 				String[] parts = str.trim().split("\\s+");
 				double[] line = new double[parts.length];
 				if(line.length != 4){
-					System.out.println(str);
-					throw new RuntimeException();
+					System.err.println(str);
+					throw new RuntimeException("Matrix rows should contain exactly 4 columns");
 				}
 				for(int i=0;i<line.length;i++){
 					line[i] = Double.parseDouble(parts[i]);
@@ -129,8 +129,8 @@ public class PWMBench {
 				String[] parts = str.trim().split("\\s+");
 				double[] line = new double[parts.length];
 				if(line.length != 4){
-					System.out.println(str);
-					throw new RuntimeException();
+					System.err.println(str);
+					throw new RuntimeException("Matrix rows should contain exactly 4 columns");
 				}
 				for(int i=0;i<line.length;i++){
 					line[i] = Double.parseDouble(parts[i]);
@@ -219,21 +219,21 @@ public class PWMBench {
 			File f = fit.next();
 			if(f.getAbsolutePath().endsWith(".txt")){
 
-				BufferedReader read = new BufferedReader(new FileReader(f));
+				BufferedReader reader = new BufferedReader(new FileReader(f));
 
 				DoubleList vals = new DoubleList();
 				LinkedList<Sequence> seqs = new LinkedList<>();
 
-				String str = read.readLine();
+				String str = reader.readLine();
 
 				int numCol = numCol(str);
 				if(numCol<0){
-					str = read.readLine();
+					str = reader.readLine();
 					numCol = numCol(str);
 				}
 				if(numCol<0){
-					System.out.println(str);
-					throw new RuntimeException();
+					System.err.println(str);
+					throw new RuntimeException("Incorrect data format");
 				}
 
 				do{
@@ -246,10 +246,10 @@ public class PWMBench {
 							seqs.add(seq);
 						}
 					}
-				}while( (str = read.readLine()) != null );
+				}while( (str = reader.readLine()) != null );
 				all.add( new Entry( new DataSet("",seqs) , vals.toArray(), f.getAbsolutePath().replaceAll("^"+dataDir+"/?", "")) );
 
-				read.close();
+				reader.close();
 
 			}
 		}
