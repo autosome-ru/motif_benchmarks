@@ -43,35 +43,35 @@ public class PWMBench {
 		//use AUC-PR in log'ed intensities
 		PRLOG
 	}
-	
+
 	private static class Entry{
-		
+
 		private DataSet data;
 		private double[] vals;
 		private String file;
-		
-		
+
+
 		public Entry(DataSet data, double[] vals, String file) {
 			super();
 			this.data = data;
 			this.vals = vals;
 			this.file = file;
 		}
-		
-		
-		
+
+
+
 	}
-	
-	
+
+
 	private static void parseMeme(String file, LinkedList<PFMWrapperTrainSM> models) throws NumberFormatException, IOException, CloneNotSupportedException{
 		BufferedReader reader = new BufferedReader( new FileReader(file) );
-		
+
 		String str = null;
-		
+
 		LinkedList<double[]> pwm = new LinkedList<>();
 		String name = null;
 		boolean inPWM = false;
-		
+
 		while( (str = reader.readLine()) != null ){
 			if(str.startsWith("MOTIF ")){
 				if(name != null){
@@ -97,26 +97,26 @@ public class PWMBench {
 				pwm.add(line);
 			}
 		}
-		
+
 		if(name != null){
 			PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 1E-4);
 			models.add(temp);
 
 		}
-		
+
 		reader.close();
 	}
-	
-	
-	
+
+
+
 	private static void parsePhilipp(String file, LinkedList<PFMWrapperTrainSM> models) throws NumberFormatException, IOException, CloneNotSupportedException{
 		BufferedReader reader = new BufferedReader( new FileReader(file) );
-		
+
 		String str = null;
-		
+
 		LinkedList<double[]> pwm = new LinkedList<>();
 		String name = null;
-		
+
 		while( (str = reader.readLine()) != null ){
 			if(str.startsWith(">")){
 				if(name != null){
@@ -138,34 +138,34 @@ public class PWMBench {
 				pwm.add(line);
 			}
 		}
-		
+
 		if(name != null){
 			PFMWrapperTrainSM temp = new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
 			models.add(temp);
 
 		}
-		
+
 		reader.close();
 	}
-	
-	
-	
+
+
+
 	private static LinkedList<PFMWrapperTrainSM> readModels(String... dFiles ) throws IOException, CloneNotSupportedException{
-		
+
 		LinkedList<PFMWrapperTrainSM> models = new LinkedList<>();
-		
+
 		for(String file:dFiles){
 			//parseMeme(file, models);
 			parsePhilipp(file, models);
-			
+
 		}
-		
-		
-		
+
+
+
 		return models;
-		
+
 	}
-	
+
 	private static int numCol(String str){
 		String[] test = str.split("\\s+");
 		if(test.length != 2){
@@ -188,44 +188,44 @@ public class PWMBench {
 		}
 		return num;
 	}
-	
+
 	private static LinkedList<Entry> readData(String dataDirOrFile) throws IOException, IllegalArgumentException, WrongAlphabetException, EmptyDataSetException{
-		
+
 		Iterator<File> fit = null;
 		LinkedList<Entry> all = new LinkedList<>();
 		String dataDir = null;
-		
+
 		if( (new File(dataDirOrFile)).isDirectory() ) {
 			dataDir = dataDirOrFile;
-			
+
 			Stream<File> stream = Files.walk(Paths.get(dataDirOrFile)).filter(Files::isRegularFile).map(Path::toFile);
-			
+
 			fit = stream.iterator();
-		
+
 		}else {
 			File dataFile = new File(dataDirOrFile);
 			dataDir = dataFile.getParent();
 			if(dataDir == null) {
 				dataDir = "";
 			}
-			
+
 			LinkedList<File> li = new LinkedList<>();
 			li.add(dataFile);
-			
+
 			fit = li.iterator();
 		}
-		
+
 		while( fit.hasNext() ){
 			File f = fit.next();
 			if(f.getAbsolutePath().endsWith(".txt")){
-				
+
 				BufferedReader read = new BufferedReader(new FileReader(f));
-				
+
 				DoubleList vals = new DoubleList();
 				LinkedList<Sequence> seqs = new LinkedList<>();
-				
+
 				String str = read.readLine();
-				
+
 				int numCol = numCol(str);
 				if(numCol<0){
 					str = read.readLine();
@@ -235,7 +235,7 @@ public class PWMBench {
 					System.out.println(str);
 					throw new RuntimeException();
 				}
-				
+
 				do{
 					if(str.trim().length()>0){
 						String[] parts = str.split("\\s+");
@@ -248,38 +248,38 @@ public class PWMBench {
 					}
 				}while( (str = read.readLine()) != null );
 				all.add( new Entry( new DataSet("",seqs) , vals.toArray(), f.getAbsolutePath().replaceAll("^"+dataDir+"/?", "")) );
-				
+
 				read.close();
-				
+
 			}
 		}
-		
+
 		return all;
-		
+
 	}
-	
-	
+
+
 	private static double score(PFMWrapperTrainSM model, DataSet data, double[] vals, Scoring scoring) throws Exception{
-		
+
 		double[] preds = new double[data.getNumberOfElements()];
 		for(int i=0;i<data.getNumberOfElements();i++){
-			
+
 			Sequence seq = data.getElementAt(i);
-			
+
 			double[] temp = new double[(seq.getLength()-model.getLength()+1)*2];
-			
+
 			for(int j=0,k=0;j<2;j++){
 				for(int l=0;l<seq.getLength()-model.getLength()+1;l++,k++){
 					temp[k] = model.getLogScoreFor(seq, l);
 				}
 				seq = seq.reverseComplement();
 			}
-			
+
 			preds[i] = Normalisation.getLogSum(temp);
 		}
-		
+
 		if(scoring == Scoring.ROC || scoring == Scoring.PR || scoring == Scoring.ROCLOG || scoring == Scoring.PRLOG) {
-		
+
 			vals = vals.clone();
 			if(scoring == Scoring.ROCLOG || scoring == Scoring.PRLOG) {
 				double mi = ToolBox.min(vals);
@@ -287,21 +287,21 @@ public class PWMBench {
 					vals[i] = Math.log(vals[i]-mi+1.0);
 				}
 			}
-			double mean = ToolBox.mean(vals);
+			double mean = ToolBox.mean(0, vals.length, vals);
 			double sd = ToolBox.sd(0, vals.length, vals);
-			
+
 			double t = mean + 4d * sd;
-			
+
 			double[] vals2 = vals.clone();
 			Arrays.sort(vals2);
 			double t2 = vals2[vals2.length-50];
 			if(t2 < t) {
 				t = t2;
 			}
-			
+
 			DoubleList pos = new DoubleList();
 			DoubleList neg = new DoubleList();
-			
+
 			for(int i=0;i<vals.length;i++) {
 				if(vals[i] >= t) {
 					pos.add(preds[i]);
@@ -309,10 +309,10 @@ public class PWMBench {
 					neg.add(preds[i]);
 				}
 			}
-			
+
 			pos.sort();
 			neg.sort();
-			
+
 			if(scoring == Scoring.ROC || scoring == Scoring.ROCLOG) {
 				AucROC roc = new AucROC();
 				return (double)roc.compute(pos.toArray(), neg.toArray()).getResultAt(0).getValue();
@@ -320,9 +320,9 @@ public class PWMBench {
 				AucPR pr = new AucPR();
 				return (double)pr.compute(pos.toArray(), neg.toArray()).getResultAt(0).getValue();
 			}
-			
-			
-		}else { 
+
+
+		}else {
 			if(scoring == Scoring.EXP) {
 				double mi = ToolBox.min(preds);
 				for(int i=0;i<preds.length; i++) {
@@ -339,54 +339,44 @@ public class PWMBench {
 			return ToolBox.pearsonCorrelation(vals, preds);
 		}
 	}
-	
-	
+
+
 	public static void main(String[] args) throws Exception {
-		
+
 		Scoring scoring = Scoring.valueOf(args[0]);
-		
+
 		LinkedList<Entry> data = readData(args[1]);
-		
+
 		int off = 2;
-		
+
 		String[] sub = new String[args.length-off];
 		System.arraycopy(args, off, sub, 0, sub.length);
-		
+
 		LinkedList<PFMWrapperTrainSM> models = readModels(sub);
-		
-		
+
+
 		Iterator<PFMWrapperTrainSM> modIt = models.iterator();
-		
+
 		Iterator<Entry> datIt = data.iterator();
-		
+
 		while(datIt.hasNext()){
 			Entry en = datIt.next();
 			System.out.print("\t"+en.file);
 		}
 		System.out.println();
-		
 		while(modIt.hasNext()){
 			PFMWrapperTrainSM model = modIt.next();
-			
+
 			System.out.print(model.getName());
-			
+
 			datIt = data.iterator();
-			
+
 			while(datIt.hasNext()){
 				Entry en = datIt.next();
-				
 				double score = score(model, en.data, en.vals, scoring);
-				
 				System.out.print("\t"+score);
-				
 			}
-			
 			System.out.println();
-			
-			
 		}
-		
-
 	}
-
 }
