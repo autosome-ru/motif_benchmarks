@@ -241,7 +241,7 @@ public class PWMBench {
 						String[] parts = str.split("\\s+");
 						if(parts.length==2){
 							double val = Double.parseDouble(parts[numCol]);
-							Sequence seq = Sequence.create(DNAAlphabetContainer.SINGLETON, parts[1-numCol].trim().substring(0, 41));
+							Sequence seq = Sequence.create(DNAAlphabetContainer.SINGLETON, parts[1-numCol].trim());
 							vals.add(val);
 							seqs.add(seq);
 						}
