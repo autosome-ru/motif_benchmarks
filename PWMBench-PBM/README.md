@@ -22,7 +22,7 @@ METRIC corresponds to different metrics.
 
 Motif score is defined as sum-occupancy.
 
-Motif have to be positional frequency matrix. It's internally corrected with pseudocount of 0.0001.
+Motif have to be positional frequency matrix or positional count matrix. It's internally corrected with pseudocount of 0.0001.
 
 Motif format (`motif.mat`):
 ```

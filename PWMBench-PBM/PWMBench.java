@@ -56,9 +56,15 @@ public class PWMBench {
         }
     }
 
+    private static void pcm_to_pfm(double[][] matrix) {
+        for (double[] row : matrix) {
+            Normalisation.sumNormalisation(row);
+        }
+    }
+
     private static PFMWrapperTrainSM parsePlainMotif(String filename) throws NumberFormatException, IOException, CloneNotSupportedException {
         BufferedReader reader = new BufferedReader( new FileReader(filename) );
-        LinkedList<double[]> pwm = new LinkedList<>();
+        LinkedList<double[]> pcm_list = new LinkedList<>();
         String str = null;
         String name = null;
         while( (str = reader.readLine()) != null ){
@@ -74,11 +80,13 @@ public class PWMBench {
                 for (int i = 0; i < line.length; i++) {
                     line[i] = Double.parseDouble(parts[i]);
                 }
-                pwm.add(line);
+                pcm_list.add(line);
             }
         }
         reader.close();
-        return new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pwm.toArray(new double[0][]), 4E-4);
+        double[][] pcm = pcm_list.toArray(new double[0][]);
+        pcm_to_pfm(pcm);
+        return new PFMWrapperTrainSM(DNAAlphabetContainer.SINGLETON, name, pcm, 4E-4);
     }
 
     private static int numCol(String str){
