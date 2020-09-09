@@ -18,6 +18,7 @@ METRIC corresponds to different metrics.
 * PR - AUC PR
 * ROCLOG - AUC ROC in logarithmed intensities
 * PRLOG - AUC PR in logarithmed intensities
+* all - calculate every metrics ({metrics_name: value, ...} in JSON format is printed)
 
 Motif score is defined as sum-occupancy.
 

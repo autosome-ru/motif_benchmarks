@@ -3,7 +3,8 @@ WORKDIR /app
 COPY entrypoint.sh /app/entrypoint.sh
 COPY PWMBench.java /app/PWMBench.java
 COPY jstacs-2.3.jar /app/jstacs-2.3.jar
-RUN javac -cp .:jstacs-2.3.jar PWMBench.java
+COPY json-simple-1.1.1.jar /app/json-simple-1.1.1.jar
+RUN javac -cp .:jstacs-2.3.jar:json-simple-1.1.1.jar PWMBench.java
 
 #########################
 
@@ -21,8 +22,7 @@ LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/
 LABEL org.label-schema.version=$BUILD_VERSION
 
 WORKDIR /app
-COPY entrypoint.sh /app/entrypoint.sh
-COPY jstacs-2.3.jar /app/jstacs-2.3.jar
+COPY entrypoint.sh  jstacs-2.3.jar  json-simple-1.1.1.jar  /app/
 COPY --from=0 /app/*.class /app/
 WORKDIR /data
 ENTRYPOINT ["/app/entrypoint.sh"]

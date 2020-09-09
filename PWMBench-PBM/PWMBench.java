@@ -7,9 +7,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.stream.Stream;
+import org.json.simple.JSONObject;
 
 import de.jstacs.classifiers.performanceMeasures.AucPR;
 import de.jstacs.classifiers.performanceMeasures.AucROC;
@@ -52,7 +55,6 @@ public class PWMBench {
             this.vals = vals;
         }
     }
-
 
     private static PFMWrapperTrainSM parsePlainMotif(String filename) throws NumberFormatException, IOException, CloneNotSupportedException {
         BufferedReader reader = new BufferedReader( new FileReader(filename) );
@@ -225,10 +227,19 @@ public class PWMBench {
 
 
     public static void main(String[] args) throws Exception {
-        Scoring scoring = Scoring.valueOf(args[0]);
         Entry entry = readData(args[1]);
         PFMWrapperTrainSM model = parsePlainMotif(args[2]);
-        double score = score(model, entry.data, entry.vals, scoring);
-        System.out.println(score);
+        if (args[0].equals("all")) {
+            Map<String, Double> result = new HashMap<String, Double>();
+            for (Scoring scoring : Scoring.values()) {
+                double score = score(model, entry.data, entry.vals, scoring);
+                result.put(scoring.toString(), score);
+            }
+            System.out.println(new JSONObject(result));
+        } else {
+            Scoring scoring = Scoring.valueOf(args[0]);
+            double score = score(model, entry.data, entry.vals, scoring);
+            System.out.println(score);
+        }
     }
 }
