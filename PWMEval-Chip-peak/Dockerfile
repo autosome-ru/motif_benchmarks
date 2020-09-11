@@ -27,7 +27,15 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
      && cp /bedtools/bedtools2/bin/bedtools /app/bedtools \
      && rm -r /bedtools \
     && apk add R  ttf-ubuntu-font-family rsync \
-    && Rscript -e 'install.packages(c("rjson", "optparse", "MASS", "caTools", "pROC"), repos = "https://cloud.r-project.org/")' \
+     && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/Rcpp/Rcpp_1.0.1.tar.gz", repos=NULL, INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.4.tar.gz", repos=NULL, INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/getopt/getopt_1.20.2.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/optparse/optparse_1.6.2.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/bitops_1.0-6.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.17.1.2.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/rjson_0.2.20.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/MASS/MASS_7.3-51.4.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+       && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/pROC/pROC_1.14.0.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
     && apk del .builddeps \
     && rm -rf /var/cache/apk/*
 WORKDIR /workdir/
