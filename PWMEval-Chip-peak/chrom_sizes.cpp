@@ -6,7 +6,6 @@
 #include <cstring>
 
 void count_fasta_sizes(std::istream& input, std::ostream& output) {
-  bool skip = false;
   std::string seq_id;
   int seq_len = 0;
   while (input.good()) {
