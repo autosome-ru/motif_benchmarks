@@ -1,17 +1,12 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.stream.Stream;
+import java.util.Map;
+
 import org.json.simple.JSONObject;
 
 import de.jstacs.classifiers.performanceMeasures.AucPR;
@@ -28,22 +23,28 @@ import de.jstacs.utils.ToolBox;
 
 public class PWMBench {
 
-    public enum Scoring{
-        //use intensities and log-sum-occupancy
-        ASIS,
-        //use intensities and sum-occupancy
-        EXP,
-        //use log-intensities and log-sum-occupancy
-        LOG,
-        //use AUC-ROC
-        ROC,
-        //use AUC-PR
-        PR,
-        //use AUC-ROC in log'ed intensities
-        ROCLOG,
-        //use AUC-PR in log'ed intensities
-        PRLOG
-    }
+	public enum Scoring{
+		//use intensities and log-sum-occupancy
+		ASIS,
+		//use intensities and sum-occupancy
+		EXP,
+		//use log-intensities and log-sum-occupancy
+		LOG,
+		//use AUC-ROC
+		ROC,
+		//use AUC-PR
+		PR,
+		//use AUC-ROC on log'ed intensities
+		ROCLOG,
+		//use AUC-PR on log'ed intensities
+		PRLOG,
+		//use Pearson correlation on 8-mers
+		MERS,
+		//use Pearson correlation on 8-mers for log-intensities
+		LOGMERS
+	}
+
+	private static int MER = 8;
 
     private static class Entry{
         private DataSet data;
@@ -70,7 +71,7 @@ public class PWMBench {
         while( (str = reader.readLine()) != null ){
             if (str.startsWith(">")) {
                 name = str.replaceAll(">", "").trim();
-            } else {
+            } else if (str.trim().length()!=0) {
                 String[] parts = str.trim().split("\\s+");
                 double[] line = new double[parts.length];
                 if (line.length != 4) {
@@ -112,7 +113,6 @@ public class PWMBench {
         return num;
     }
 
-
     private static Entry readData(String filename) throws IOException, IllegalArgumentException, WrongAlphabetException, EmptyDataSetException{
         File dataFile = new File(filename);
         if( !dataFile.isFile() ) {
@@ -151,7 +151,6 @@ public class PWMBench {
 
         return new Entry(new DataSet("", seqs), vals.toArray());
     }
-
 
     private static double score(PFMWrapperTrainSM model, DataSet data, double[] vals, Scoring scoring) throws Exception{
 
@@ -215,24 +214,60 @@ public class PWMBench {
                 return (double)pr.compute(pos.toArray(), neg.toArray()).getResultAt(0).getValue();
             }
 
+        } else if(scoring == Scoring.EXP || scoring == Scoring.LOG || scoring == Scoring.ASIS) {
+			if(scoring == Scoring.EXP) {
+				double mi = ToolBox.min(preds);
+				for(int i=0;i<preds.length; i++) {
+					preds[i] = Math.exp(preds[i]-mi);
+				}
+			} else if(scoring == Scoring.LOG) {
+				vals = vals.clone();
+				double mi = ToolBox.min(vals);
+				for(int i=0;i<vals.length;i++) {
+					vals[i] = Math.log(vals[i]-mi+1.0);
+				}
+			}
 
-        }else {
-            if(scoring == Scoring.EXP) {
-                double mi = ToolBox.min(preds);
-                for(int i=0;i<preds.length; i++) {
-                    preds[i] = Math.exp(preds[i]-mi);
-                }
-            }else if(scoring == Scoring.LOG) {
-                vals = vals.clone();
-                double mi = ToolBox.min(vals);
-                for(int i=0;i<vals.length;i++) {
-                    vals[i] = Math.log(vals[i]-mi+1.0);
-                }
-            }
-            return ToolBox.pearsonCorrelation(vals, preds);
-        }
+			return ToolBox.pearsonCorrelation(vals, preds);
+		} else {
+
+			HashMap<String, DoubleList[]> merMap = new HashMap<String, DoubleList[]>();
+			double mi = ToolBox.min(vals);
+
+			for(int i=0;i<data.getNumberOfElements();i++) {
+				Sequence seq = data.getElementAt(i);
+				double pred = preds[i];
+				double val = (scoring == Scoring.LOGMERS ? Math.log(vals[i]-mi+1.0) : vals[i]);
+				for(int j=0;j<seq.getLength()-MER+1;j++) {
+					Sequence temp = seq.getSubSequence(j, MER);
+					if(temp.toString().compareTo(temp.reverseComplement().toString())>0) {
+						temp = temp.reverseComplement();
+					}
+					String tempStr = temp.toString();
+					if(!merMap.containsKey(tempStr)) {
+						merMap.put(tempStr, new DoubleList[] {new DoubleList(),new DoubleList()});
+					}
+					DoubleList[] li = merMap.get(tempStr);
+					li[0].add(pred);
+					li[1].add(val);
+				}
+			}
+
+			double[] meanPreds = new double[merMap.size()];
+			double[] meanVals = new double[meanPreds.length];
+
+			int i=0;
+			for(String key : merMap.keySet()) {
+				DoubleList[] li = merMap.get(key);
+				meanPreds[i] = li[0].mean(0, li[0].length());
+				meanVals[i] = li[1].mean(0, li[1].length());
+				i++;
+			}
+
+			return ToolBox.pearsonCorrelation(meanVals, meanPreds);
+
+		}
     }
-
 
     public static void main(String[] args) throws Exception {
         Entry entry = readData(args[1]);
