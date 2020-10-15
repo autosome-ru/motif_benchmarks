@@ -74,6 +74,7 @@ def read_motif_hits(stream)
   {sequence_lengths: sequence_lengths, pvalues: pvalues}
 end
 
+show_curve_points = ARGV.delete('--curve-points')
 raise 'Specify model length'  unless model_length = Integer(ARGV[0])
 raise 'Specify file with model hits or `-` for stdin'  unless control_fn = ARGV[1]
 
@@ -105,11 +106,9 @@ result = {
   metrics: {
     roc_auc: roc_auc,
     logroc_auc: logroc_auc,
-  },
-  supplementary: {
-    roc: round_values_in_curve(roc, 2),
-    logroc: round_values_in_curve(logroc, 2),
-  },
+  }
 }
+
+result[:supplementary] = {roc: round_values_in_curve(roc, 2), logroc: round_values_in_curve(logroc, 2)}  if show_curve_points
 
 puts result.to_json
