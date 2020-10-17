@@ -17,6 +17,7 @@ options = {
   pseudocount: :log,
   word_count: 100,
   curve_points: false,
+  summit_column: 10,
 }
 
 option_parser = OptionParser.new{|opts|
@@ -33,6 +34,34 @@ option_parser = OptionParser.new{|opts|
   }
   opts.on('--bed', 'Peaks are formatted in bed (peaks are reshaped into constant-size peaks around center of a peak)'){
     options[:peaks_format] = :bed
+  }
+  opts.on('--peak-format FORMAT', 'Peaks are formatted in a custom format. ' +
+                                  'FORMAT is a `<chr column>,<start column>,<end column>,<value column><mode>` string. ' +
+                                  'Column indiced are 1-based. Mode can be either `entire`, or `center`, or ' +
+                                  '`summit:(abs|rel):<summit column>` for different modes of interval clipping. ' +
+                                  'Summit types `abs`, `rel` are for absolute summit coordinates vs relative (from start) summit position'){|format|
+  chr_column, start_column, end_column, value_column, mode = format.split(',')
+    options[:peaks_format] = :custom
+    options[:peaks_format_config] = {chr_column: Integer(chr_column), start_column: Integer(start_column), end_column: Integer(end_column), value_column: Integer(value_column)}
+    if mode == 'entire'
+      options[:peaks_format_config][:mode] = :entire
+    elsif mode == 'center'
+      options[:peaks_format_config][:mode] = :center
+    elsif mode.split(':')[0] == 'summit'
+      options[:peaks_format_config][:mode] = :summit
+      options[:peaks_format_config][:summit_column] = Integer(mode.split(':')[2])
+
+      summit_type = mode.split(':')[1]
+      if summit_type == 'abs'
+        options[:peaks_format_config][:summit_type] = :absolute
+      elsif summit_type == 'rel'
+        options[:peaks_format_config][:summit_type] = :relative
+      else
+        raise "Unknown summit type `#{summit_type}`. Should be abs or rel"
+      end
+    else
+      raise 'Unknown mode of format'
+    end
   }
 
   opts.on('--gz', 'Force un-gzipping peaks'){ options[:peaks_compression] = :gz }
@@ -66,6 +95,6 @@ system("java -cp /app/ape.jar #{ape_class} /workdir/motif.pwm --single-motif --b
 auc_opts = []
 auc_opts << '--curve-points'  if options[:curve_points]
 auc_opts = auc_opts.join(' ')
-system("java -cp /app/sarus.jar #{sarus_class}  /workdir/positive.fa  /workdir/motif.pwm  besthit " + 
+system("java -cp /app/sarus.jar #{sarus_class}  /workdir/positive.fa  /workdir/motif.pwm  besthit " +
     " --output-scoring-mode pvalue --pvalues-file /workdir/motif.thr  --add-flanks" +
     " | ruby /app/calculate_auc.rb #{motif_length} - #{auc_opts} ")

@@ -21,7 +21,7 @@ void count_fasta_sizes(std::istream& input, std::ostream& output) {
       } else {
         seq_len += line.length();
       }
-    } 
+    }
   }
   if (seq_id.length() > 0) {
     output << seq_id << "\t" << seq_len << std::endl;
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     std::cerr << "Usage: " << argv[0] << " <filename or - for stdin>" << std::endl;
     exit(1);
   }
-  
+
   if (!strcmp(argv[1], "-")) {
     count_fasta_sizes(std::cin, std::cout);
   } else {

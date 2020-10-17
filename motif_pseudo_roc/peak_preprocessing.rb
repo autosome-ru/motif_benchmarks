@@ -29,18 +29,29 @@ def refine_peaks_format_guess(guessed_format, opts)
   }
 end
 
-def narrowPeak_summit(peaks_filename)
-  $stderr.print "narrowPeak summit for #{peaks_filename}"
+def peak_summit(peaks_filename, peaks_format_config)
+  $stderr.print "peak summit for #{peaks_filename}"
+  chr_column = peaks_format_config[:chr_column] - 1
+  start_column = peaks_format_config[:start_column] - 1
+  summit_column = peaks_format_config[:summit_column] - 1
+  value_column = peaks_format_config[:value_column] - 1
+  summit_type = peaks_format_config[:summit_type]
   tmp_file = Tempfile.new('narrowPeak_summit.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
       next  if line.start_with?('#')
       row = line.chomp.split
-      chr = row[0]
-      start = Integer(row[1])
-      peak_offset = Integer(row[9])
-      peak_summit = start + peak_offset
-      value = row[6]
+      chr = row[chr_column]
+      start = Integer(row[start_column])
+      if summit_type == :relative
+        peak_offset = Integer(row[summit_column])
+        peak_summit = start + peak_offset
+      elsif summit_type == :absolute
+        peak_summit = Integer(row[summit_column])
+      else
+        raise "Unknown type of summit `#{summit_type}`. Should be :relative or :absolute."
+      end
+      value = row[value_column]
       tmp_file.puts [chr, peak_summit, peak_summit + 1, '.', value].join("\t")
     }
   }
@@ -50,18 +61,22 @@ def narrowPeak_summit(peaks_filename)
   }
 end
 
-def peak_center(peaks_filename)
+def peak_center(peaks_filename, peaks_format_config)
   $stderr.print "peak centers for #{peaks_filename}"
+  chr_column = peaks_format_config[:chr_column] - 1
+  start_column = peaks_format_config[:start_column] - 1
+  end_column = peaks_format_config[:end_column] - 1
+  value_column = peaks_format_config[:value_column] - 1
   tmp_file = Tempfile.new('peak_center.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
       next  if line.start_with?('#')
       row = line.chomp.split
-      chr = row[0]
-      start = Integer(row[1])
-      stop = Integer(row[2])
+      chr = row[chr_column]
+      start = Integer(row[start_column])
+      stop = Integer(row[end_column])
       center = (start + stop) / 2
-      value = row[4]
+      value = row[value_column]
       tmp_file.puts [chr, center, center + 1, '.', value].join("\t")
     }
   }
@@ -71,15 +86,28 @@ def peak_center(peaks_filename)
   }
 end
 
-def get_single_points_bed(peaks_filename, peaks_format)
-  $stderr.puts "extract peak centers #{peaks_filename} (format: #{peaks_format})"
-  if peaks_format == :bed
-    peak_center(peaks_filename)
-  elsif peaks_format == :narrowPeak
-    narrowPeak_summit(peaks_filename)
-  else
-    raise 'Incorrect peak format.'
-  end
+def entire_peak(peaks_filename, peaks_format_config)
+  $stderr.print "peak centers for #{peaks_filename}"
+  chr_column = peaks_format_config[:chr_column] - 1
+  start_column = peaks_format_config[:start_column] - 1
+  end_column = peaks_format_config[:end_column] - 1
+  value_column = peaks_format_config[:value_column] - 1
+  tmp_file = Tempfile.new('entire_peak.bed')
+  File.open(peaks_filename){|f|
+    f.each_line.each{|line|
+      next  if line.start_with?('#')
+      row = line.chomp.split
+      chr = row[chr_column]
+      start = Integer(row[start_column])
+      stop = Integer(row[end_column])
+      value = row[value_column]
+      tmp_file.puts [chr, start, stop, '.', value].join("\t")
+    }
+  }
+  tmp_file.close
+  tmp_file.path.tap{|result|
+    $stderr.puts " --> #{result}"
+  }
 end
 
 def find_mounted_peaks_file
@@ -135,18 +163,53 @@ def fasta_with_lengths(fasta_fn)
   }
 end
 
+def infer_peaks_format_config(peaks_format, opts)
+  case peaks_format
+  when :custom
+    opts[:peaks_format_config]
+  when :bed
+    {chr_column: 1, start_column: 2, end_column: 3, mode: :center, value_column: 5}
+  when :narrowPeak
+    {chr_column: 1, start_column: 2, end_column: 3, mode: :summit, value_column: 7, summit_column: 10, summit_type: :relative}
+  when :fasta
+    {mode: :nop}
+  else
+  end
+end
+
 def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
   peaks_filename = opts[:peaks_url] ? download_file(opts[:peaks_url]) : find_mounted_peaks_file
   peaks_format_info = refine_peaks_format_guess(guess_peaks_format(peaks_filename), opts)
+  peaks_format = peaks_format_info[:peaks_format] # bed/narrowPeak/custom/fasta
 
-  case peaks_format_info[:peaks_format]
-  when :fasta
-    # do nothing
-  when :bed, :narrowPeak
+  peaks_format_config = infer_peaks_format_config(peaks_format, opts) # center/summit/entire or NOP config
+  mode = peaks_format_config[:mode]
+
+  peaks_filename = decompress_file(peaks_filename, peaks_format_info[:peaks_compression])
+
+  if mode == :center
+  elsif mode == :summit
+  elsif mode == :entire
+    raise "Shouldn't be here"
+  else
+    raise "Unknown peaks clipping mode `#{peaks_format_config[:mode]}`"
+  end
+
+  if mode == :nop
+    # do nothing (e.g. for FASTA peak format)
+  else
     $stderr.puts 'preprocess peaks'
-    peaks_filename = decompress_file(peaks_filename, peaks_format_info[:peaks_compression])
-    peaks_filename = get_single_points_bed(peaks_filename, peaks_format_info[:peaks_format])
-    peaks_filename = slop_peaks(peaks_filename, assembly_infos[:chromosome_sizes_fn], opts[:flank_size])
+    if mode == :center
+      peaks_filename = peak_center(peaks_filename, peaks_format_config)
+      peaks_filename = slop_peaks(peaks_filename, assembly_infos[:chromosome_sizes_fn], opts[:flank_size])
+    elsif mode == :summit
+      peaks_filename = peak_summit(peaks_filename, peaks_format_config)
+      peaks_filename = slop_peaks(peaks_filename, assembly_infos[:chromosome_sizes_fn], opts[:flank_size])
+    elsif mode == :entire
+      peaks_filename = entire_peak(peaks_filename, peaks_format_config)
+    else
+      raise "Unknown mode `#{mode}`"
+    end
     peaks_filename = fasta_by_bed_peaks(peaks_filename, assembly_infos[:fasta_fn])
   end
 
