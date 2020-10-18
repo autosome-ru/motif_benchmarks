@@ -1,6 +1,5 @@
+require_relative 'support'
 require_relative 'fasta_sequence'
-require_relative 'counts'
-require_relative 'frequencies'
 
 class SequenceDataset
   attr_reader :filename
@@ -16,7 +15,6 @@ class SequenceDataset
     }
   end
 
-
   def local_mono_background
     @local_mono_background ||= begin
       counts = Hash.new(0)
@@ -25,7 +23,7 @@ class SequenceDataset
           counts[letter] += 1
         }
       }
-      MonoCounts.from_hash(counts).plus_revcomp.frequencies
+      normed_hash(counts_symmetrized(counts)).values_at(*Nucleotides)
     end
   end
 
@@ -38,7 +36,7 @@ class SequenceDataset
           counts[diletter] += 1
         }
       }
-      DiCounts.from_hash(counts).plus_revcomp.frequencies
+      normed_hash(counts_symmetrized(counts)).values_at(*Dinucleotides)
     end
   end
 end
