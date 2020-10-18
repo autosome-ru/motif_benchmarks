@@ -17,8 +17,11 @@ class FastaSequence
   def self.each_in_file(filename)
     return enum_for(:each_in_file, filename)  unless block_given?
     File.open(filename) do |f|
-      f.each_line.map(&:chomp).each_slice(2) do |header, sequence|
-        yield self.new(sequence, header)
+      f.each_line.map(&:strip).slice_before{|line|
+        line.start_with?('>')
+      }.each do |lines|
+        header, *sequence_parts = lines
+        yield self.new(sequence_parts.join, header)
       end
     end
   end
