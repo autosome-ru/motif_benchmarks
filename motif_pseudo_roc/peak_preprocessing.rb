@@ -14,9 +14,7 @@ def guess_peaks_format(filename)
   else # default
     peaks_format = :fasta
   end
-  {peaks_compression: peaks_compression, peaks_format: peaks_format}.tap{|result|
-    $stderr.puts "For #{filename} guessed peaks format: #{result}"
-  }
+  {peaks_compression: peaks_compression, peaks_format: peaks_format}
 end
 
 # override sequences format/compression based on command-line options
@@ -24,13 +22,10 @@ def refine_peaks_format_guess(guessed_format, opts)
   {
     peaks_compression: opts.fetch(:peaks_compression, guessed_format[:peaks_compression]),
     peaks_format: opts.fetch(:peaks_format, guessed_format[:peaks_format]),
-  }.tap{|result|
-    $stderr.puts "Refined peaks format: #{result}"
   }
 end
 
 def peak_summit(peaks_filename, peaks_format_config)
-  $stderr.print "peak summit for #{peaks_filename}"
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   summit_column = peaks_format_config[:summit_column] - 1
@@ -56,13 +51,10 @@ def peak_summit(peaks_filename, peaks_format_config)
     }
   }
   tmp_file.close
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 def peak_center(peaks_filename, peaks_format_config)
-  $stderr.print "peak centers for #{peaks_filename}"
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
@@ -81,13 +73,10 @@ def peak_center(peaks_filename, peaks_format_config)
     }
   }
   tmp_file.close
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 def entire_peak(peaks_filename, peaks_format_config)
-  $stderr.print "peak centers for #{peaks_filename}"
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
@@ -105,9 +94,7 @@ def entire_peak(peaks_filename, peaks_format_config)
     }
   }
   tmp_file.close
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 def find_mounted_peaks_file
@@ -123,32 +110,23 @@ def find_mounted_peaks_file
   elsif existing_peak_files.size > 1
     raise 'Provide the only file with peaks.'
   end
-  existing_peak_files.first.tap{|result|
-    $stderr.puts "Found peaks file #{result}"
-  }
+  existing_peak_files.first
 end
 
 def slop_peaks(peaks_filename, assembly_sizes_fn, flank_size)
-  $stderr.print "slop peaks in #{peaks_filename} to a certain length"
   tmp_file = Tempfile.new('slop_peaks.bed').tap(&:close)
   system("/app/bedtools slop -i #{peaks_filename.shellescape} -g #{assembly_sizes_fn.shellescape} -l #{flank_size - 1} -r #{flank_size} > #{tmp_file.path.shellescape}")
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 def fasta_by_bed_peaks(peaks_bed_filename, assembly_fn)
-  $stderr.print "extract fasta from bed file #{peaks_bed_filename}"
   tmp_file = Tempfile.new('peaks.fa').tap(&:close)
   system("/app/bedtools getfasta -bed #{peaks_bed_filename.shellescape} -fi #{assembly_fn.shellescape} > #{tmp_file.path.shellescape}")
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 # control should be formatted FASTA (i.e. with seq length specified in header line)
 def fasta_with_lengths(fasta_fn)
-  $stderr.print "add sequence lengths to FASTA headers in #{fasta_fn}"
   tmp_file = Tempfile.new('peaks_formatted.fa')
   File.open(fasta_fn){|f|
     f.each_line.slice_before(/^>/).each{|hdr, *lines|
@@ -158,9 +136,7 @@ def fasta_with_lengths(fasta_fn)
     }
   }
   tmp_file.close
-  tmp_file.path.tap{|result|
-    $stderr.puts " --> #{result}"
-  }
+  tmp_file.path
 end
 
 def infer_peaks_format_config(peaks_format, opts)
@@ -198,7 +174,6 @@ def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
   if mode == :nop
     # do nothing (e.g. for FASTA peak format)
   else
-    $stderr.puts 'preprocess peaks'
     if mode == :center
       peaks_filename = peak_center(peaks_filename, peaks_format_config)
       peaks_filename = slop_peaks(peaks_filename, assembly_infos[:chromosome_sizes_fn], opts[:flank_size])

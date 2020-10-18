@@ -21,11 +21,11 @@ def download_file(url)
 end
 
 def decompress_file(filename, compression)
-  $stderr.puts "decompress #{filename} (compression: #{compression})"
   case compression
   when false
     filename
   when :gz
+    $stderr.puts "decompress #{filename} (compression: #{compression})"
     tmp_file = Tempfile.new.tap(&:close)
     system("gzip -cd #{filename.shellescape} > #{tmp_file.path.shellescape}")
     tmp_file.path
