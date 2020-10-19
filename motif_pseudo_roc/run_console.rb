@@ -7,6 +7,7 @@ require_relative 'peak_preprocessing'
 require_relative 'assembly_preprocessing'
 # require 'bioinform'
 
+require_relative 'background'
 require_relative 'sequence_dataset'
 
 options = {
@@ -119,9 +120,9 @@ obtain_and_preprocess_peak_sequences!(options, assembly_infos)
 if options[:background] == :infer
   dataset = SequenceDataset.new('/workdir/positive.fa')
   if options[:background_type] == :mono
-    background = dataset.local_mono_background.join(',')
+    background = local_mono_background(dataset).join(',')
   elsif options[:background_type] == :di
-    background = dataset.local_di_background.join(',')
+    background = local_di_background(dataset).join(',')
   else
     raise "Should not be here"
   end
