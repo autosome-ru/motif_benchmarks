@@ -163,14 +163,6 @@ def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
 
   peaks_filename = decompress_file(peaks_filename, peaks_format_info[:peaks_compression])
 
-  if mode == :center
-  elsif mode == :summit
-  elsif mode == :entire
-    raise "Shouldn't be here"
-  else
-    raise "Unknown peaks clipping mode `#{peaks_format_config[:mode]}`"
-  end
-
   if mode == :nop
     # do nothing (e.g. for FASTA peak format)
   else
