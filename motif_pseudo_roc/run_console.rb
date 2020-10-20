@@ -113,7 +113,11 @@ option_parser = OptionParser.new{|opts|
 
 option_parser.parse!(ARGV)
 
-assembly_infos = obtain_and_preprocess_assembly!(options)
+# We don't need assembly when peaks are provided in FASTA format, thus we can ignore
+# missing `--assembly-name` or not provided `/assembly.fa`.
+# An exception will be triggered later if assembly is needed but absent.
+assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
+
 obtain_and_preprocess_motif!(options, necessary_motif_type: :pwm, default_motif_type: :no_default)
 obtain_and_preprocess_peak_sequences!(options, assembly_infos)
 

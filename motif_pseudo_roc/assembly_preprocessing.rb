@@ -1,6 +1,6 @@
 require_relative 'utils'
 
-def obtain_and_preprocess_assembly!(opts)
+def obtain_and_preprocess_assembly!(opts, necessary: false)
   if opts[:assembly_name]
     if Dir.exist?("/assembly")
       assembly_fasta_fn = "/assembly/#{opts[:assembly_name]}.fa"
@@ -17,7 +17,11 @@ def obtain_and_preprocess_assembly!(opts)
       assembly_fasta_fn = "/assembly.fa"
       assembly_sizes_fn = "/assembly.chrom.sizes"
     else
-      raise "Error! Specify assembly name or mount assembly files (preferably via /assembly folder)."
+      if necessary
+        raise "Error! Specify assembly name or mount assembly files (preferably via /assembly folder)."
+      else
+        return nil
+      end
     end
   end
 

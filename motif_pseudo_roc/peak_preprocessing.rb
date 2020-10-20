@@ -160,6 +160,7 @@ def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
   if mode == :nop
     # do nothing (e.g. for FASTA peak format)
   else
+    raise "Error! Specify assembly name or mount assembly files (preferably via /assembly folder)."  if !assembly_infos
     if mode == :center
       peaks_filename = peak_center(peaks_filename, peaks_format_config)
       peaks_filename = slop_peaks(peaks_filename, assembly_infos[:chromosome_sizes_fn], opts[:flank_size])
