@@ -6,6 +6,40 @@ Benchmark for evaluation of weight matrices (PWMs) based on ChIP-seq data (seque
 Original benchmark is developed by Ivan Kulakovskiy.
 
 ## Instructions
+### Console version
+Motif should be supplied either as a mounted file `/motif.pwm` (or `/motif.pcm`, or `/motif.ppm`, or `/motif.pfm`) or via `--motif-url <URL>`. Conversion to PWM is performed internally.
+
+Positive set of sequences can be passed via `/peaks.fa`. Also one can pass set of peak coordinates and an assembly. Peaks can be passed in different formats: `/peaks.bed`, `/peaks.narrowPeak` or just `/peaks`. In the last case one should also specify `--peak-format` which describes which columns contain chromosome, start and end coordinates and how should such a peak be treated. There are several options to treat peaks: they can be taken as is using format `entire`. Alternatively one can take fixed length intervals around peak center/summit; length of interval can be changed used `--peak-flank-size` option (default: 150nt in each direction). It is recommended to use fixed length intervals around peak summit.
+
+For `.bed` format peaks are treated as `--peak-format 1,2,3,center`, i.e. center of each peak is taken.
+
+For `.narrowPeak` format peak are treated as `--peak-format 1,2,3,summit:rel:10`, i.e. summit is taken. Summit coordinate is specified in 10-th column relative to peak start position.
+
+Peak treatment can be redefined. E.g. content of `peaks.interval`:
+```
+#chromosome	from	to	some_info	summit_position	any_other_infos...
+chr1	12	112	.	62	...
+chrX	100500	100735	.	100598	...
+...
+```
+then we can process it using `--peak-format 1,2,3,summit:abs:4` option.
+
+
+Background model is crucial for this benchmark. We recommend to use dinucleotide background models. Default model `infer:di` is obtained by calculating dinculeotide frequencies of positive set. An alternative is to use predefined background, e.g. whole genome frequencies for hg38:
+`--background di:0.09815922831551911,0.05049139142847783,0.0700008469320879,0.07700899311854521,0.07264462371481141,0.0516855514432905,0.01000850296695631,0.0700008469320879,0.059702607121927695,0.042460006040716786,0.0516855514432905,0.05049139142847783,0.06515399996155279,0.059702607121927695,0.07264462371481141,0.09815922831551911`.
+
+
+Invocation example:
+```
+docker run --rm  \
+  --volume /path/to/genomes/:/assembly  \
+  --volume $(pwd)/TF_peaks.bed:/peaks.bed:ro  \
+  --volume $(pwm)/TF_motif.pwm:/motif.pwm:ro  \
+  vorontsovie/motif_pseudo_roc:v2.0  \
+    --assembly-name hg38
+```
+
+### Version configurable via `config.json` (outdated)
 PWM should be supplied in `/workdir/config.json`. 
 
 `config.json` format:
