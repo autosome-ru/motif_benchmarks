@@ -38,11 +38,17 @@ option_parser = OptionParser.new{|opts|
   opts.on('--bed', 'Peaks are formatted in bed (peaks are reshaped into constant-size peaks around center of a peak)'){
     options[:peaks_format] = :bed
   }
+  opts.on('--peak-flank-size VALUE', 'In center/summit peak preprocessing modes, peaks are transformed: ' +
+                                     'peak center/summit point is taken and extended with flanks of fixed size in both directions. ' +
+                                     'Default flank size is 150nt.') {|value|
+    opts[:flank_size] = Float(value)
+  }
   opts.on('--peak-format FORMAT', 'Peaks are formatted in a custom format. ' +
                                   'FORMAT is a `<chr column>,<start column>,<end column>,<mode>` string. ' +
                                   'Column indiced are 1-based. Mode can be either `entire`, or `center`, or ' +
                                   '`summit:(abs|rel):<summit column>` for different modes of interval clipping. ' +
-                                  'Summit types `abs`, `rel` are for absolute summit coordinates vs relative (from start) summit position'){|format|
+                                  'Summit types `abs`, `rel` are for absolute summit coordinates vs relative (from start) summit position. ' +
+                                  'See also --peak-flank-size option.'){|format|
   chr_column, start_column, end_column, mode = format.split(',')
     options[:peaks_format] = :custom
     options[:peaks_format_config] = {chr_column: Integer(chr_column), start_column: Integer(start_column), end_column: Integer(end_column)}
