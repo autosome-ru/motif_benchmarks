@@ -29,7 +29,6 @@ def peak_summit(peaks_filename, peaks_format_config)
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   summit_column = peaks_format_config[:summit_column] - 1
-  value_column = peaks_format_config[:value_column] - 1
   summit_type = peaks_format_config[:summit_type]
   tmp_file = Tempfile.new('narrowPeak_summit.bed')
   File.open(peaks_filename){|f|
@@ -46,8 +45,7 @@ def peak_summit(peaks_filename, peaks_format_config)
       else
         raise "Unknown type of summit `#{summit_type}`. Should be :relative or :absolute."
       end
-      value = row[value_column]
-      tmp_file.puts [chr, peak_summit, peak_summit + 1, '.', value].join("\t")
+      tmp_file.puts [chr, peak_summit, peak_summit + 1,].join("\t")
     }
   }
   tmp_file.close
@@ -58,7 +56,6 @@ def peak_center(peaks_filename, peaks_format_config)
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
-  value_column = peaks_format_config[:value_column] - 1
   tmp_file = Tempfile.new('peak_center.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
@@ -68,8 +65,7 @@ def peak_center(peaks_filename, peaks_format_config)
       start = Integer(row[start_column])
       stop = Integer(row[end_column])
       center = (start + stop) / 2
-      value = row[value_column]
-      tmp_file.puts [chr, center, center + 1, '.', value].join("\t")
+      tmp_file.puts [chr, center, center + 1].join("\t")
     }
   }
   tmp_file.close
@@ -80,7 +76,6 @@ def entire_peak(peaks_filename, peaks_format_config)
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
-  value_column = peaks_format_config[:value_column] - 1
   tmp_file = Tempfile.new('entire_peak.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
@@ -89,8 +84,7 @@ def entire_peak(peaks_filename, peaks_format_config)
       chr = row[chr_column]
       start = Integer(row[start_column])
       stop = Integer(row[end_column])
-      value = row[value_column]
-      tmp_file.puts [chr, start, stop, '.', value].join("\t")
+      tmp_file.puts [chr, start, stop].join("\t")
     }
   }
   tmp_file.close
@@ -144,9 +138,9 @@ def infer_peaks_format_config(peaks_format, opts)
   when :custom
     opts[:peaks_format_config]
   when :bed
-    {chr_column: 1, start_column: 2, end_column: 3, mode: :center, value_column: 5}
+    {chr_column: 1, start_column: 2, end_column: 3, mode: :center}
   when :narrowPeak
-    {chr_column: 1, start_column: 2, end_column: 3, mode: :summit, value_column: 7, summit_column: 10, summit_type: :relative}
+    {chr_column: 1, start_column: 2, end_column: 3, mode: :summit, summit_column: 10, summit_type: :relative}
   when :fasta
     {mode: :nop}
   else

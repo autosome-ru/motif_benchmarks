@@ -39,13 +39,13 @@ option_parser = OptionParser.new{|opts|
     options[:peaks_format] = :bed
   }
   opts.on('--peak-format FORMAT', 'Peaks are formatted in a custom format. ' +
-                                  'FORMAT is a `<chr column>,<start column>,<end column>,<value column><mode>` string. ' +
+                                  'FORMAT is a `<chr column>,<start column>,<end column>,<mode>` string. ' +
                                   'Column indiced are 1-based. Mode can be either `entire`, or `center`, or ' +
                                   '`summit:(abs|rel):<summit column>` for different modes of interval clipping. ' +
                                   'Summit types `abs`, `rel` are for absolute summit coordinates vs relative (from start) summit position'){|format|
-  chr_column, start_column, end_column, value_column, mode = format.split(',')
+  chr_column, start_column, end_column, mode = format.split(',')
     options[:peaks_format] = :custom
-    options[:peaks_format_config] = {chr_column: Integer(chr_column), start_column: Integer(start_column), end_column: Integer(end_column), value_column: Integer(value_column)}
+    options[:peaks_format_config] = {chr_column: Integer(chr_column), start_column: Integer(start_column), end_column: Integer(end_column)}
     if mode == 'entire'
       options[:peaks_format_config][:mode] = :entire
     elsif mode == 'center'
