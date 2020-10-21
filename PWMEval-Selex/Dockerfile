@@ -19,7 +19,9 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/seqshuffle.c -o /app/seqshuffle \
      && g++ -O3 -W -Wall -pedantic /source/filter_fasta.cpp -o /app/filter_fasta \
      && rm /source -r \
-    && Rscript -e 'install.packages(c("rjson", "optparse"), repos = "https://cloud.r-project.org/")' \
+    && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/getopt/getopt_1.20.2.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+    && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/optparse/optparse_1.6.2.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
+    && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/rjson_0.2.20.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
     && apk del .builddeps \
     && rm -rf /var/cache/apk/*
 WORKDIR /workdir/
