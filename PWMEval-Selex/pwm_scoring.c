@@ -140,7 +140,7 @@ read_profile(char *iFile)
       while (isspace(*buf))
         buf++;
       i = 0;
-      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e') {
+      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e' || *buf == 'E') {
         if (i >= MVAL_MAX) {
           fprintf(stderr, "Matrix value is too large \"%s\" \n", buf);
           exit(1);
@@ -157,7 +157,7 @@ read_profile(char *iFile)
         buf++;
       /* Read Second column value */
       i = 0;
-      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e') {
+      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e' || *buf == 'E') {
         if (i >= MVAL_MAX) {
           fprintf(stderr, "Matrix value is too large \"%s\" \n", buf);
           exit(1);
@@ -174,7 +174,7 @@ read_profile(char *iFile)
         buf++;
       /* Read Third column value */
       i = 0;
-      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e') {
+      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e' || *buf == 'E') {
         if (i >= MVAL_MAX) {
           fprintf(stderr, "Matrix value is too large \"%s\" \n", buf);
           exit(1);
@@ -191,7 +191,7 @@ read_profile(char *iFile)
         buf++;
       /* Read fourth column value */
       i = 0;
-      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e') {
+      while (isdigit(*buf) || *buf == '-' || *buf == '.' || *buf == 'e' || *buf == 'E') {
         if (i >= MVAL_MAX) {
           fprintf(stderr, "Matrix value is too large \"%s\" \n", buf);
           exit(1);
