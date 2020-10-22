@@ -11,13 +11,12 @@ LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree
 LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
 LABEL org.label-schema.version=$BUILD_VERSION
 
-COPY ./chrom_sizes.cpp /source/
+COPY chrom_sizes.cpp pwm_scoring.c  /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev \
     && mkdir -p /app/ \
-     && wget -O /source/pwm_scoring.c  https://raw.githubusercontent.com/gio31415/PWMEval/7973c98a13685fc66984af5dd43048aee7f79456/pwm_scoring.c \
      && gcc -O3 -W -Wall -pedantic -std=gnu99 /source/pwm_scoring.c -o /app/pwm_scoring \
      && g++ -O3 -W -Wall -pedantic /source/chrom_sizes.cpp -o /app/chrom_sizes \
-     && rm /source/pwm_scoring.c \
+     && rm -rf /source \
     && mkdir /bedtools && cd /bedtools \
      && wget 'https://github.com/arq5x/bedtools2/releases/download/v2.27.1/bedtools-2.27.1.tar.gz' \
      && tar -zxf bedtools-2.27.1.tar.gz \
