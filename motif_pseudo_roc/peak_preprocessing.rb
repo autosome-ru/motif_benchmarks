@@ -30,7 +30,7 @@ def peak_summit(peaks_filename, peaks_format_config)
   start_column = peaks_format_config[:start_column] - 1
   summit_column = peaks_format_config[:summit_column] - 1
   summit_type = peaks_format_config[:summit_type]
-  tmp_file = Tempfile.new('narrowPeak_summit.bed')
+  tmp_file = register_new_tempfile('narrowPeak_summit.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
       next  if line.start_with?('#')
@@ -56,7 +56,7 @@ def peak_center(peaks_filename, peaks_format_config)
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
-  tmp_file = Tempfile.new('peak_center.bed')
+  tmp_file = register_new_tempfile('peak_center.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
       next  if line.start_with?('#')
@@ -76,7 +76,7 @@ def entire_peak(peaks_filename, peaks_format_config)
   chr_column = peaks_format_config[:chr_column] - 1
   start_column = peaks_format_config[:start_column] - 1
   end_column = peaks_format_config[:end_column] - 1
-  tmp_file = Tempfile.new('entire_peak.bed')
+  tmp_file = register_new_tempfile('entire_peak.bed')
   File.open(peaks_filename){|f|
     f.each_line.each{|line|
       next  if line.start_with?('#')
@@ -108,20 +108,20 @@ def find_mounted_peaks_file
 end
 
 def slop_peaks(peaks_filename, assembly_sizes_fn, flank_size)
-  tmp_file = Tempfile.new('slop_peaks.bed').tap(&:close)
+  tmp_file = register_new_tempfile('slop_peaks.bed').tap(&:close)
   system("/app/bedtools slop -i #{peaks_filename.shellescape} -g #{assembly_sizes_fn.shellescape} -l #{flank_size - 1} -r #{flank_size} > #{tmp_file.path.shellescape}")
   tmp_file.path
 end
 
 def fasta_by_bed_peaks(peaks_bed_filename, assembly_fn)
-  tmp_file = Tempfile.new('peaks.fa').tap(&:close)
+  tmp_file = register_new_tempfile('peaks.fa').tap(&:close)
   system("/app/bedtools getfasta -bed #{peaks_bed_filename.shellescape} -fi #{assembly_fn.shellescape} > #{tmp_file.path.shellescape}")
   tmp_file.path
 end
 
 # control should be formatted FASTA (i.e. with seq length specified in header line)
 def fasta_with_lengths(fasta_fn)
-  tmp_file = Tempfile.new('peaks_formatted.fa')
+  tmp_file = register_new_tempfile('peaks_formatted.fa')
   File.open(fasta_fn){|f|
     f.each_line.slice_before(/^>/).each{|hdr, *lines|
       seq = lines.map(&:strip).join
