@@ -3,9 +3,12 @@ require 'tmpdir'
 require 'shellwords'
 require 'fileutils'
 
-def tempname
-  t = Time.now.strftime("%Y%m%d")
-  path = File.join(Dir.tmpdir, "#{t}-#{$$}-#{rand(0x100000000).to_s(36)}")
+def tempname(prefix: '')
+  path = nil
+  while !path || File.exist?(path)
+    t = Time.now.strftime("%Y%m%d")
+    path = File.join(Dir.tmpdir, "#{prefix}#{t}-#{$$}-#{rand(0x100000000).to_s(36)}")
+  end
   yield path  if block_given?
   path
 end
