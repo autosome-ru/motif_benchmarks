@@ -1,11 +1,26 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <vector>
 #include <cstdlib>
 #include <cctype>
 #include <cstring>
 
-void count_fasta_sizes(std::istream& input, std::ostream& output) {
+class ContigInfo {
+public:
+  std::string contig;
+  int length;
+  ContigInfo(std::string contig, int length) : contig(contig), length(length) {  }
+  friend std::ostream& operator<<(std::ostream& out, const ContigInfo& info);
+};
+
+std::ostream& operator<<(std::ostream& out, const ContigInfo& info) {
+  out << info.contig << "\t" << info.length << std::endl;
+  return out;
+}
+
+std::vector<ContigInfo> count_fasta_sizes(std::istream& input) {
+  std::vector<ContigInfo> result;
   std::string seq_id;
   int seq_len = 0;
   while (input.good()) {
@@ -14,7 +29,7 @@ void count_fasta_sizes(std::istream& input, std::ostream& output) {
     if (line.length() > 0) {
       if (line[0] == '>') {
         if (seq_id.length() > 0) {
-          output << seq_id << "\t" << seq_len << std::endl;
+          result.push_back(ContigInfo(seq_id, seq_len));
         }
         seq_id = line.substr(1);
         seq_len = 0;
@@ -24,7 +39,14 @@ void count_fasta_sizes(std::istream& input, std::ostream& output) {
     }
   }
   if (seq_id.length() > 0) {
-    output << seq_id << "\t" << seq_len << std::endl;
+    result.push_back(ContigInfo(seq_id, seq_len));
+  }
+  return result;
+}
+
+void print_sizes(const std::vector<ContigInfo>& contig_sizes, std::ostream& output) {
+  for (auto iter = contig_sizes.begin(); iter != contig_sizes.end(); ++iter) {
+    output << *iter;
   }
 }
 
@@ -35,14 +57,14 @@ int main(int argc, char **argv) {
   }
 
   if (!strcmp(argv[1], "-")) {
-    count_fasta_sizes(std::cin, std::cout);
+    print_sizes(count_fasta_sizes(std::cin), std::cout);
   } else {
     std::ifstream fasta_file(argv[1], std::ifstream::in);
     if (fasta_file.fail()) {
       std::cerr << "Failed to open file" << std::endl;
       exit(1);
     }
-    count_fasta_sizes(fasta_file, std::cout);
+    print_sizes(count_fasta_sizes(fasta_file), std::cout);
   }
   return 0;
 }
