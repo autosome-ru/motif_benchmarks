@@ -31,15 +31,17 @@ def download_file(url)
   Dir.glob("#{dirname}/*").first
 end
 
-def decompress_file(filename, compression)
+def decompress_file(filename, compression, output_filename: nil)
   case compression
   when false
     filename
   when :gz
-    $stderr.puts "decompress #{filename} (compression: #{compression})"
-    tmp_file = Tempfile.new.tap(&:close)
-    system("gzip -cd #{filename.shellescape} > #{tmp_file.path.shellescape}")
-    tmp_file.path
+    tmp_dir = Dir.mktmpdir('decompress_file')
+    basename = File.basename(filename, File.extname(filename))
+    output_filename = File.join(tmp_dir, basename)  unless output_filename
+    $stderr.puts "decompress #{filename} (compression: #{compression}) into #{output_filename}"
+    system("gzip -cd #{filename.shellescape} > #{output_filename.shellescape}")
+    output_filename
   else
     raise 'Unknown compression format'
   end

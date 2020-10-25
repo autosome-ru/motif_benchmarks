@@ -26,12 +26,12 @@ def obtain_and_preprocess_assembly!(opts, necessary: false)
   end
 
   if !File.exist?(assembly_fasta_fn) && File.exist?("#{assembly_fasta_fn}.gz")
-    decompress_file("#{assembly_fasta_fn}.gz", :gz)
+    decompress_file("#{assembly_fasta_fn}.gz", :gz, output_filename: assembly_fasta_fn)
   end
 
   system("/app/download_assembly.sh #{opts[:assembly_name]} #{assembly_fasta_fn.shellescape}")  if !File.exist?(assembly_fasta_fn)
 
-  if !File.exist?(assembly_sizes_fn)
+  if !File.exist?(assembly_sizes_fn) || File.size(assembly_sizes_fn).zero?
     $stderr.puts "Chromosome sizes file #{assembly_sizes_fn} not found, generating..."
     system("/app/chrom_sizes #{assembly_fasta_fn.shellescape} > #{assembly_sizes_fn.shellescape}")
   end
