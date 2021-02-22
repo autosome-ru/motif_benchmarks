@@ -1,0 +1,14 @@
+FROM ubuntu:20.04
+ENV TZ=Etc/GMT
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    apt-get update && \
+    apt-get install --yes wget build-essential autoconf automake libtool  \
+        zlib1g-dev libxml2-dev libxslt1-dev libexpat1-dev python perl ghostscript gsfonts && \
+    for MODULE in File::Which HTML::PullParser HTML::Template HTML::TreeBuilder JSON XML::Simple XML::Parser::Expat Log::Log4perl Math::CDF XML::Compile::SOAP11  XML::Compile::WSDL11  XML::Compile::Transport::SOAPHTTP ; do yes | cpan $MODULE; done && \
+    wget http://meme-suite.org/meme-software/5.3.0/meme-5.3.0.tar.gz && \
+    tar zxf meme-5.3.0.tar.gz && \
+    cd meme-5.3.0 && ./configure --prefix=/meme --with-url=http://meme-suite.org --enable-build-libxml2 --enable-build-libxslt && \
+    make && make test && make install && \
+    apt-get remove --yes build-essential autoconf automake libtool && apt-get autoremove --yes && \
+    rm -rf /meme-5.3.0.tar.gz /meme-5.3.0 && rm -rf /var/lib/apt/lists/*
+ENV PATH="/meme/bin:/meme/libexec/meme-5.3.0:${PATH}"
