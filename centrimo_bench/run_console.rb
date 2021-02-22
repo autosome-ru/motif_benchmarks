@@ -7,20 +7,21 @@ require_relative 'peak_preprocessing'
 require_relative 'assembly_preprocessing'
 # require 'bioinform'
 
-require_relative 'background'
-require_relative 'sequence_dataset'
+# require_relative 'background'
+# require_relative 'sequence_dataset'
 
 options = {
 #   image_filename: "/results/roc_curve.png",
 #   roc_filename: "roc_curve.tsv",
 #   num_top_peaks: 500,
 #   plot_curve: false,
-  flank_size: 150,
+  flank_size: 250,
   pseudocount: :log,
   word_count: 100,
   curve_points: false,
   summit_column: 10,
   background_type: :di, background: :infer,
+  jsonify_results: false,
 }
 
 option_parser = OptionParser.new{|opts|
@@ -76,45 +77,7 @@ option_parser = OptionParser.new{|opts|
   opts.on('--gz', 'Force un-gzipping peaks'){ options[:peaks_compression] = :gz }
   opts.on('--not-compressed', 'Prevent un-gzipping peaks'){ options[:peaks_compression] = false }
 
-  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
-                                "Available values: `infer:mono`, `infer:di`, `mono:<pA>,<pC>,<pG>,<pT>`, `di:<pAA>,<pAC>,...,<pTT>`, " +
-                                "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)"){|value|
-    if value == 'uniform'
-      options[:background_type] = :mono
-      options[:background] = 'uniform'
-    elsif value.start_with?('gc:')
-      options[:background_type] = :mono
-      options[:background] = Float(value.split(':')[1])
-    elsif value.start_with?('mono:')
-      options[:background_type] = :mono
-      options[:background] = value.split(':')[1] # "A,C,G,T"
-      raise  unless options[:background].split(',').map{|x| Float(x) }.size == 4
-    elsif value.start_with?('di:')
-      options[:background_type] = :di
-      options[:background] = value.split(':')[1]  # "AA,AC,AG,AT,CA,CC,...TG,TT"
-      raise  unless options[:background].split(',').map{|x| Float(x) }.size == 16
-    elsif value.start_with?('infer:mono')
-      options[:background_type] = :mono
-      options[:background] = :infer
-    elsif value.start_with?('infer:di')
-      options[:background_type] = :di
-      options[:background] = :infer
-    else
-      raise "Unknown background mode `#{value}`."
-    end
-  }
-
-  opts.on('--curve-points', 'ROC curve points'){ options[:curve_points] = true }
-#   opts.on('--plot', 'Plot ROC curve'){ options[:plot_image] = true }
-#   opts.on('--plot-filename', "Specify plot filename [default=#{options[:image_filename]}]") {|filename|
-#     arg[:image_filename] = filename
-#   }
-#   opts.on('--roc', 'Store ROC curve point'){ options[:store_roc] = true }
-#   opts.on('--roc-filename', "Specify ROC curve points filename [default=#{options[:roc_filename]}]"){|filename|
-#     options[:roc_filename] = filename
-#   }
-#   opts.on('--json', 'Print results as a json file'){ options[:jsonify_results] = true }
-#   opts.on('--top', "Number of top peaks to take [default=#{options[:num_top_peaks]}]"){ options[:num_top_peaks] = Integer(value) }
+  opts.on('--json', 'Print results as a json file'){ options[:jsonify_results] = true }
 }
 
 option_parser.parse!(ARGV)
@@ -124,39 +87,26 @@ option_parser.parse!(ARGV)
 # An exception will be triggered later if assembly is needed but absent.
 assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
 
-obtain_and_preprocess_motif!(options, necessary_motif_type: :pwm, default_motif_type: :no_default)
+obtain_and_preprocess_motif!(options, necessary_motif_type: :pfm, default_motif_type: :no_default)
 obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results")
 
-if options[:background] == :infer
-  dataset = SequenceDataset.new('/workdir/positive.fa')
-  if options[:background_type] == :mono
-    background = local_mono_background(dataset).join(',')
-  elsif options[:background_type] == :di
-    background = local_di_background(dataset).join(',')
-  else
-    raise "Should not be here"
-  end
-else
-  background = options[:background]
+def read_centrimo_results(filename)
+  lines = File.readlines(filename)
+  row = lines[1].split("\t")
+  db_index, motif_id, motif_alt_id, consensus, evalue, adj_pvalue, log_adj_pvalue, \
+    bin_location, bin_width, total_width, sites_in_bin, total_sites, p_success, pvalue, mult_tests = *row
+  {
+    motif_id: motif_id, consensus: consensus,
+    evalue: evalue, adj_pvalue: adj_pvalue, log_adj_pvalue: log_adj_pvalue,
+    bin_location: bin_location, bin_width: bin_width, total_width: total_width, sites_in_bin: sites_in_bin,
+    total_sites: total_sites, p_success: p_success, pvalue: pvalue, mult_tests: mult_tests,
+  }
 end
 
-
-motif_length = read_matrix('/workdir/motif.pwm', num_columns: 4)[:matrix].length
-sarus_class = 'ru.autosome.SARUS'
-
-if options[:background_type] == :mono
-  ape_class = 'ru.autosome.ape.PrecalculateThresholds'
-  system("java -cp /app/ape.jar #{ape_class} /workdir/motif.pwm --single-motif --background #{background} > /workdir/motif.thr")
-elsif options[:background_type] == :di
-  ape_class = 'ru.autosome.ape.di.PrecalculateThresholds'
-  system("java -cp /app/ape.jar #{ape_class} /workdir/motif.pwm --single-motif --background #{background} --from-mono > /workdir/motif.thr")
+info = read_centrimo_results('/results/centrimo.tsv')[1].split("\t")
+if options[:jsonify_results]
+  puts info.to_json
 else
-  raise "Should not be here"
+  puts info[:evalue]
 end
-
-auc_opts = []
-auc_opts << '--curve-points'  if options[:curve_points]
-auc_opts = auc_opts.join(' ')
-system("java -cp /app/sarus.jar #{sarus_class}  /workdir/positive.fa  /workdir/motif.pwm  besthit " +
-    " --output-scoring-mode pvalue --pvalues-file /workdir/motif.thr  --add-flanks" +
-    " | ruby /app/calculate_auc.rb #{motif_length} - #{auc_opts} ")

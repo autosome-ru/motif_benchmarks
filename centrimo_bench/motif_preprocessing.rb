@@ -75,6 +75,19 @@ def matrix_as_string(model)
   res.join("\n")
 end
 
+def matrix_as_meme_string(model)
+  res = [">#{model[:name]}"]
+  res += [
+    "MEME version 4",
+    "",
+    "ALPHABET= ACGT",
+    "",
+    "MOTIF #{model[:name]}",
+    "letter-probability matrix: alength= 4 w= #{model[:matrix].length} nsites= #{model.fetch(:word_count, 100)} E= 0"
+  ]
+  res += model[:matrix].map{|row| row.join("\t") }
+  res.join("\n")
+end
 #############################
 
 def calculate_pseudocount(count, pseudocount: :log)
@@ -91,18 +104,20 @@ end
 #############################
 
 def pcm2pfm(pcm)
+  word_count = pcm[:word_count] || pcm[:matrix].map(&:sum).max
   pfm_matrix = pcm[:matrix].map{|row|
     norm = row.sum
     row.map{|x| x.to_f / norm }
   }
-  {name: pcm[:name], matrix: pfm_matrix}
+  {name: pcm[:name], matrix: pfm_matrix, word_count: word_count}
 end
 
-def pfm2pcm(pfm, word_count: 100)
+def pfm2pcm(pfm, word_count: )
+  word_count = word_count || pfm[:word_count] || 100
   pcm_matrix = pfm[:matrix].map{|row|
     row.map{|el| el * word_count }
   }
-  {name: pfm[:name], matrix: pcm_matrix}
+  {name: pfm[:name], matrix: pcm_matrix, word_count: word_count}
 end
 
 def pcm2pwm(pcm, pseudocount: :log)
@@ -126,10 +141,13 @@ def get_pfm(filename, format, opts)
     pcm = read_matrix(filename, num_columns: 4)
     pfm = pcm2pfm(pcm)
     tempname{|tempfile|
-      File.write(tempfile, matrix_as_string(pfm))
+      File.write(tempfile, matrix_as_meme_string(pfm))
     }
   when :pfm
-    filename
+    pfm = read_matrix(filename, num_columns: 4)
+    tempname{|tempfile|
+      File.write(tempfile, matrix_as_meme_string(pfm))
+    }
   when :pwm
     raise "Can't convert pwm --> pfm"
   else
@@ -140,12 +158,15 @@ end
 def get_pcm(filename, format, opts)
   case format
   when :pcm
-    filename
+    pcm = read_matrix(filename, num_columns: 4)
+    tempname{|tempfile|
+      File.write(tempfile, matrix_as_meme_string(pcm))
+    }
   when :pfm
     pfm = read_matrix(filename, num_columns: 4)
     pcm = pfm2pcm(pfm, word_count: opts[:word_count])
     tempname{|tempfile|
-      File.write(tempfile, matrix_as_string(pcm))
+      File.write(tempfile, matrix_as_meme_string(pcm))
     }
   when :pwm
     raise "Can't convert pwm --> pcm"
@@ -160,17 +181,20 @@ def get_pwm(filename, format, opts)
     pcm = read_matrix(filename, num_columns: 4)
     pwm = pcm2pwm(pcm, pseudocount: opts[:pseudocount])
     tempname{|tempfile|
-      File.write(tempfile, matrix_as_string(pwm))
+      File.write(tempfile, matrix_as_meme_string(pwm))
     }
   when :pfm
     pfm = read_matrix(filename, num_columns: 4)
     pcm = pfm2pcm(pfm, word_count: opts[:word_count])
     pwm = pcm2pwm(pcm, pseudocount: opts[:pseudocount])
     tempname{|tempfile|
-      File.write(tempfile, matrix_as_string(pwm))
+      File.write(tempfile, matrix_as_meme_string(pwm))
     }
   when :pwm
-    filename
+    pwm = read_matrix(filename, num_columns: 4)
+    tempname{|tempfile|
+      File.write(tempfile, matrix_as_meme_string(pwm))
+    }
   else
     raise "Unknown motif format #{format}"
   end
