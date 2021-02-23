@@ -5,16 +5,8 @@ require_relative 'utils'
 require_relative 'motif_preprocessing'
 require_relative 'peak_preprocessing'
 require_relative 'assembly_preprocessing'
-# require 'bioinform'
-
-# require_relative 'background'
-# require_relative 'sequence_dataset'
 
 options = {
-#   image_filename: "/results/roc_curve.png",
-#   roc_filename: "roc_curve.tsv",
-#   num_top_peaks: 500,
-#   plot_curve: false,
   flank_size: 250,
   pseudocount: :log,
   word_count: 100,
