@@ -88,6 +88,23 @@ def matrix_as_meme_string(model)
   res += model[:matrix].map{|row| row.join("\t") }
   res.join("\n")
 end
+
+def get_meme_word_count(filename)
+  header_line = File.readlines(filename).detect{|l|
+    l.start_with?("letter-probability matrix")
+  }
+  n_sites = header_line.match(/\bnsites\s*=\s*(\S+)\b/)[1]
+  Float(n_sites)
+end
+
+def get_meme_motif_length(filename)
+  header_line = File.readlines(filename).detect{|l|
+    l.start_with?("letter-probability matrix")
+  }
+  motif_length = header_line.match(/\bw\s*=\s*(\S+)\b/)[1]
+  Integer(motif_length)
+end
+
 #############################
 
 def calculate_pseudocount(count, pseudocount: :log)

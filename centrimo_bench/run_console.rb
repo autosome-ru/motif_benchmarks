@@ -6,6 +6,29 @@ require_relative 'motif_preprocessing'
 require_relative 'peak_preprocessing'
 require_relative 'assembly_preprocessing'
 
+
+# Resulting values are intentionally left as strings, not numbers. That's because some of values can be
+# e.g. "1.5e-436" which can't be converted to float without loss of precision
+def read_centrimo_results(filename)
+  lines = File.readlines(filename).map(&:chomp)
+  row = lines[1].split("\t").map(&:strip)
+  db_index, motif_id, motif_alt_id, consensus, evalue, adj_pvalue, log_adj_pvalue, \
+    bin_location, bin_width, total_width, sites_in_bin, total_sites, p_success, pvalue, mult_tests = *row
+  {
+    motif_id: motif_id, consensus: consensus,
+    evalue: evalue, adj_pvalue: adj_pvalue, log_adj_pvalue: log_adj_pvalue,
+    bin_location: bin_location, bin_width: bin_width, total_width: total_width, sites_in_bin: sites_in_bin,
+    total_sites: total_sites, p_success: p_success, pvalue: pvalue, mult_tests: mult_tests,
+  }
+end
+
+# aka `concentration`
+def central_probability(sites, motif_length:, sequence_length:, total_sites:, window_size: 20)
+  start = (0.5 * (sequence_length - motif_length - 1) - 0.5 * window_size).ceil
+  stop = start + window_size
+  sites[start .. stop].sum(0.0) / total_sites
+end
+
 options = {
   flank_size: 250,
   pseudocount: :log,
@@ -25,6 +48,13 @@ option_parser = OptionParser.new{|opts|
   opts.on('--pfm', 'Force use of PFM matrix'){ options[:motif_format] = :pfm }
   opts.on('--pcm', 'Force use of PCM matrix'){ options[:motif_format] = :pcm }
 
+  opts.on('--word-count', "Specify word count (default count for PFM is #{options[:word_count]},\nfor PCM default is calculated as sum of counts)"){|value|
+    options[:word_count] = Float(value)
+  }
+  opts.on('--pseudocount', 'Specify pseudocount (float value/`sqrt`/`log`. default: log, i.e. log(count))'){|value|
+    options[:pseudocount] = Float(value) rescue value
+  }
+
   opts.on('--narrowPeak', 'Peaks are formatted in narrowPeak (peaks are reshaped into constant-size peaks around summit of a peak)'){
     options[:peaks_format] = :narrowPeak
   }
@@ -33,7 +63,7 @@ option_parser = OptionParser.new{|opts|
   }
   opts.on('--peak-flank-size VALUE', 'In center/summit peak preprocessing modes, peaks are transformed: ' +
                                      'peak center/summit point is taken and extended with flanks of fixed size in both directions. ' +
-                                     'Default flank size is 150nt.') {|value|
+                                     "Default flank size is #{options[:flank_size]}nt.") {|value|
     opts[:flank_size] = Float(value)
   }
   opts.on('--peak-format FORMAT', 'Peaks are formatted in a custom format. ' +
@@ -66,6 +96,8 @@ option_parser = OptionParser.new{|opts|
     end
   }
 
+  opts.on('--window-size', '...')
+
   opts.on('--gz', 'Force un-gzipping peaks'){ options[:peaks_compression] = :gz }
   opts.on('--not-compressed', 'Prevent un-gzipping peaks'){ options[:peaks_compression] = false }
 
@@ -81,22 +113,29 @@ assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
 
 obtain_and_preprocess_motif!(options, necessary_motif_type: :pfm, default_motif_type: :no_default)
 obtain_and_preprocess_peak_sequences!(options, assembly_infos)
-system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results")
 
-def read_centrimo_results(filename)
-  lines = File.readlines(filename)
-  row = lines[1].split("\t")
-  db_index, motif_id, motif_alt_id, consensus, evalue, adj_pvalue, log_adj_pvalue, \
-    bin_location, bin_width, total_width, sites_in_bin, total_sites, p_success, pvalue, mult_tests = *row
-  {
-    motif_id: motif_id, consensus: consensus,
-    evalue: evalue, adj_pvalue: adj_pvalue, log_adj_pvalue: log_adj_pvalue,
-    bin_location: bin_location, bin_width: bin_width, total_width: total_width, sites_in_bin: sites_in_bin,
-    total_sites: total_sites, p_success: p_success, pvalue: pvalue, mult_tests: mult_tests,
-  }
-end
+word_count = get_meme_word_count('/workdir/motif.pfm')
+motif_length = get_meme_motif_length('/workdir/motif.pfm')
+pseudocount = calculate_pseudocount(word_count, pseudocount: options[:pseudocount])
 
-info = read_centrimo_results('/results/centrimo.tsv')[1].split("\t")
+system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount}")
+
+info = read_centrimo_results('/results/centrimo.tsv')
+
+# calculate concentration for different window sizes
+sites = File.readlines('/results/site_counts.txt').drop(1).map(&:strip).map{|l| Float(l.split("\t").last) }
+
+concentrations = (5..100).step(5).map{|window_size|
+  concentration = central_probability(sites,
+                                      motif_length: motif_length,
+                                      sequence_length: 2 * options[:flank_size],
+                                      total_sites: Integer(info[:total_sites]),
+                                      window_size: window_size)
+  {window_size: window_size, concentration: concentration}
+}
+
+info[:concentrations] = concentrations
+
 if options[:jsonify_results]
   puts info.to_json
 else
