@@ -13,7 +13,7 @@ RUN apt-get update && \
     apt-get remove --yes build-essential && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/apt/lists/*
-
+RUN mkdir /workdir && chmod ugo+rwx /workdir
 WORKDIR /workdir/
 COPY *.rb /app/
 ENTRYPOINT ["ruby", "/app/run_console.rb"]
