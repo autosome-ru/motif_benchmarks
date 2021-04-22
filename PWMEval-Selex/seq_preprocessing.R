@@ -56,28 +56,29 @@ convert2fasta <- function(seq_filename, seq_format) {
 }
 
 # in addition to filtering it also joins FASTA spreaded on multiple lines into single-string format
-filter_fasta <- function(seq_filename, opts) {
-  only_acgt = 'yes'
-  if (opts$allow_iupac) {
-    only_acgt = 'no'
-  }
-
-  seq_length = 'no'
-  if (!is.na(opts$seq_length)) {
-    seq_length = opts$seq_length
-  }
-  if (only_acgt == 'yes') {
-    tmp_fn = tempfile()
-    system(paste("/app/filter_fasta", shQuote(seq_filename), seq_length,  only_acgt, " > ", shQuote(tmp_fn)))
+filter_len <- function(seq_filename, opts) {
+  filter_len = ''
+  if (is.na(opts$seq_length)) {
+    return(seq_filename)
+    } else {
+    system(paste("/app/seqkit seq ",
+                  shQuote(seq_filename),
+                  "--max-len", opts$seq_length,
+                  "--min-len", opts$seq_length,
+                  "--line-width 0",
+                  " > ", shQuote(tmp_fn)))
     return(tmp_fn)
+  }
+}
+
+# in addition to filtering it also joins FASTA spreaded on multiple lines into single-string format
+filter_acgt <- function(seq_filename, opts) {
+  if (opts$allow_iupac) {
+    return(seq_filename)
   } else {
-    if (seq_length == 'no') {
-      return(seq_filename)
-    } else{
-      tmp_fn = tempfile()
-      system(paste("/app/seqkit seq ", shQuote(seq_filename), "--max-len", seq_length, "--min-len", seq_length, " > ", shQuote(tmp_fn)))
-      return(tmp_fn)
-    }
+    tmp_fn = tempfile()
+    system(paste("/app/seqkit grep --by-seq -v -i --use-regexp --pattern '[^ACGT]' --line-width 0", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
   }
 }
 
@@ -140,12 +141,18 @@ obtain_and_preprocess_sequences <- function(opts) {
   } else {
     seq_filename = find_mounted_sequences_file()
   }
-
   seq_format_info = refine_seq_format_guess(guess_seq_format(seq_filename), opts)
+  # tm = Sys.time()
   # process sequences file into uncompressed FASTA file
   seq_filename = convert2fasta(seq_filename, seq_format_info$seq_format)
-  seq_filename = filter_fasta(seq_filename, opts)
+  # print(paste('fq2fa', Sys.time() - tm)); tm = Sys.time()
+  seq_filename = filter_len(seq_filename, opts)
+  # print(paste('filter_len', Sys.time() - tm)); tm = Sys.time()
+  seq_filename = filter_acgt(seq_filename, opts)
+  # print(paste('filter_acgt', Sys.time() - tm)); tm = Sys.time()
   seq_filename = filter_redundant(seq_filename, opts)
+  # print(paste('filter_redundant', Sys.time() - tm)); tm = Sys.time()
   seq_filename = subsample_reads(seq_filename, opts)
+  # print(paste('subsample_reads', Sys.time() - tm)); tm = Sys.time()
   return(seq_filename)
 }
