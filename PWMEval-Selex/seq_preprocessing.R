@@ -41,7 +41,7 @@ refine_seq_format_guess <- function(guessed_format, opts) {
 
 fastq2fasta <- function(seq_filename) {
   tmp_fn = tempfile()
-  system(paste("/app/fastq2fasta.sh", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
+  system(paste("/app/seqkit fq2fa", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
   return(tmp_fn)
 }
 
@@ -66,16 +66,25 @@ filter_fasta <- function(seq_filename, opts) {
   if (!is.na(opts$seq_length)) {
     seq_length = opts$seq_length
   }
-
-  tmp_fn = tempfile()
-  system(paste("/app/filter_fasta", shQuote(seq_filename), seq_length,  only_acgt, " > ", shQuote(tmp_fn)))
-  return(tmp_fn)
+  if (only_acgt == 'yes') {
+    tmp_fn = tempfile()
+    system(paste("/app/filter_fasta", shQuote(seq_filename), seq_length,  only_acgt, " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    if (seq_length == 'no') {
+      return(seq_filename)
+    } else{
+      tmp_fn = tempfile()
+      system(paste("/app/seqkit seq ", shQuote(seq_filename), "--max-len", seq_length, "--min-len", seq_length, " > ", shQuote(tmp_fn)))
+      return(tmp_fn)
+    }
+  }
 }
 
 filter_redundant <- function(seq_filename, opts) {
   if (opts$non_redundant) {
     tmp_fn = tempfile()
-    system(paste("/app/filter_redundant.sh", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
+    system(paste("/app/seqkit rmdup --by-seq ", shQuote(seq_filename), " > ", shQuote(tmp_fn)))
     return(tmp_fn)
   } else {
     return(seq_filename)
@@ -89,6 +98,21 @@ append_flanks <- function(seq_filename, opts) {
     return(tmp_fn)
   } else {
     return(seq_filename)
+  }
+}
+
+subsample_reads <- function(seq_filename, opts) {
+  if (is.na(opts$maxnum_reads)) {
+    return(seq_filename)
+  } else {
+    tmp_fn = tempfile()
+    if (is.na(opts$seed)) {
+      seed_opts = ""
+    } else {
+      seed_opts = paste("--rand-seed ", opts$seed)
+    }
+    system(paste("/app/seqkit sample", seed_opts, " --number ", opts$maxnum_reads, shQuote(seq_filename), " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
   }
 }
 
@@ -118,11 +142,10 @@ obtain_and_preprocess_sequences <- function(opts) {
   }
 
   seq_format_info = refine_seq_format_guess(guess_seq_format(seq_filename), opts)
-
   # process sequences file into uncompressed FASTA file
-  seq_filename = decompress_file(seq_filename, seq_format_info$compression)
   seq_filename = convert2fasta(seq_filename, seq_format_info$seq_format)
   seq_filename = filter_fasta(seq_filename, opts)
   seq_filename = filter_redundant(seq_filename, opts)
+  seq_filename = subsample_reads(seq_filename, opts)
   return(seq_filename)
 }

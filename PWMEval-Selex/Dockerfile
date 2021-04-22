@@ -24,6 +24,7 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/rjson_0.2.20.tar.gz", repos=NULL, type="source", INSTALL_opts=c("--no-docs", "--no-help","--no-html"));' \
     && apk del .builddeps \
     && rm -rf /var/cache/apk/*
+RUN cd /app && wget https://github.com/shenwei356/seqkit/releases/download/v0.16.0/seqkit_linux_amd64.tar.gz && tar -zxf seqkit_linux_amd64.tar.gz && rm seqkit_linux_amd64.tar.gz
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./fastq2fasta.sh ./filter_redundant.sh ./fasta_multiline_to_singleline.sh ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R ./add_flanks.sh  /app/
+COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R ./add_flanks.sh  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]

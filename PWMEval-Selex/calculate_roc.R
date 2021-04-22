@@ -92,6 +92,7 @@ option_list = list(
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
+  make_option(c("--maxnum-reads"), dest="maxnum_reads", type="integer", default=NA, help="Set a maximal number of reads to subsample"),
   make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PFM) [default=%default]")
 )
 usage = paste("\n",
