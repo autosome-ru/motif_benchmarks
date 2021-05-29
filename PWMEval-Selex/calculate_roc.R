@@ -16,6 +16,9 @@ auc_approx <- function(pos, neg, top_fraction, n_bins) {
   min = min(pos_sorted, neg_sorted)
   inc = (max - min) / n_bins
   breaks = seq(min, max, inc)
+  if (length(breaks) == 1) {
+    return( list(auc=0.5, tpr=c(0, 1), fpr=c(0, 1)) )
+  }
 
   # Compute density distributions for scores of positives and negative examples
   # Note: *(max-min)/n_bins) ensures that densities sum to 1!
