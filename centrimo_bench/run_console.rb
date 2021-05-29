@@ -119,6 +119,12 @@ motif_length = get_meme_motif_length('/workdir/motif.pfm')
 pseudocount = calculate_pseudocount(word_count, pseudocount: options[:pseudocount])
 
 system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount}")
+info = read_centrimo_results('/results/centrimo.tsv')
+if !info[:motif_id]
+  $stderr.puts "Fallback: all sequences were filtered out so we lower threshold"
+  system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount} --score 0")
+  info = read_centrimo_results('/results/centrimo.tsv')
+end
 
 info = read_centrimo_results('/results/centrimo.tsv')
 
