@@ -1,5 +1,6 @@
 require 'json'
 require 'optparse'
+require 'shellwords'
 
 require_relative 'utils'
 require_relative 'motif_preprocessing'
@@ -118,11 +119,11 @@ word_count = get_meme_word_count('/workdir/motif.pfm')
 motif_length = get_meme_motif_length('/workdir/motif.pfm')
 pseudocount = calculate_pseudocount(word_count, pseudocount: options[:pseudocount])
 
-system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount}")
+system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount} " + ARGV.shelljoin)
 info = read_centrimo_results('/results/centrimo.tsv')
 if !info[:motif_id]
   $stderr.puts "Fallback: all sequences were filtered out so we lower threshold"
-  system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount} --score 0")
+  system("centrimo /workdir/positive.fa /workdir/motif.pfm --oc /results --verbosity 1 --motif-pseudo #{pseudocount} --score 1 --use-pvalues " + ARGV.shelljoin)
   info = read_centrimo_results('/results/centrimo.tsv')
 end
 
