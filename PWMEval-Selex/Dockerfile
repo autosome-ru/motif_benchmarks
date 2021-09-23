@@ -26,5 +26,5 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && rm -rf /var/cache/apk/*
 RUN cd /app && wget https://github.com/shenwei356/seqkit/releases/download/v0.16.0/seqkit_linux_amd64.tar.gz && tar -zxf seqkit_linux_amd64.tar.gz && rm seqkit_linux_amd64.tar.gz
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R ./add_flanks.sh  /app/
+COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R prepare_sequences.R ./add_flanks.sh  /app/
 ENTRYPOINT ["/app/calculate_roc.R"]

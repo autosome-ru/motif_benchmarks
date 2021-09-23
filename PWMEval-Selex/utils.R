@@ -20,3 +20,15 @@ decompress_file <- function(filename, compression) {
     stop("Unknown compression format")
   }
 }
+
+compress_file <- function(filename, compression) {
+  if (compression == "no") {
+    return(filename)
+  } else if (compression == "gz") {
+    tmp_fn = tempfile(fileext=".gz")
+    system(paste("gzip -c", filename, " > ", shQuote(tmp_fn)))
+    return(tmp_fn)
+  } else {
+    stop("Unknown compression format")
+  }
+}

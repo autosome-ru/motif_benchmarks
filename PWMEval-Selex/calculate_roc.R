@@ -92,6 +92,9 @@ option_list = list(
   make_option(c("--flank-5"), dest="flank_5", type='character', default='', help="Append 5'-flanking sequence (adapter+barcode) to sequences"),
   make_option(c("--flank-3"), dest="flank_3", type='character', default='', help="Append 3'-flanking sequence (adapter+barcode) to sequences"),
 
+  make_option(c("--positive-file"), dest='positive_fn', type='character', default=NA, help="Use prepared positive sequences"),
+  make_option(c("--negative-file"), dest='negative_fn', type='character', default=NA, help="Use prepared negative sequences"),
+
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
   make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
@@ -122,19 +125,38 @@ args <- opts_and_args[[2]]
 
 dummy = obtain_and_preprocess_motif(opts)
 
-pos_seq_fn = obtain_and_preprocess_sequences(opts)
-neg_seq_fn = tempfile()
+if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
+  pos_seq_fn = obtain_and_preprocess_sequences(opts)
+  neg_seq_fn = tempfile()
 
-if (is.na(opts$seed)) {
-  system(paste("/app/seqshuffle", shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
+  if (is.na(opts$seed)) {
+    system(paste("/app/seqshuffle", shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
+  } else {
+    system(paste("/app/seqshuffle -s", opts$seed, shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
+  }
+
+  pos_seq_fn = append_flanks(pos_seq_fn, opts)
+  neg_seq_fn = append_flanks(neg_seq_fn, opts)
+  dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
+  dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
+} else if (is.na(opts$positive_fn) || is.na(opts$negative_fn)) {
+  stop("Provide either both positive and negative prepared sequences, or none of them")
 } else {
-  system(paste("/app/seqshuffle -s", opts$seed, shQuote(pos_seq_fn), ">", shQuote(neg_seq_fn)))
-}
+  if (endsWith(opts$positive_fn, '.gz')) {
+    pos_seq_fn = decompress_file(opts$positive_fn, "gz")
+  } else {
+    pos_seq_fn = opts$positive_fn
+  }
 
-pos_seq_fn = append_flanks(pos_seq_fn, opts)
-neg_seq_fn = append_flanks(neg_seq_fn, opts)
-dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
-dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
+  if (endsWith(opts$negative_fn, '.gz')) {
+    neg_seq_fn = decompress_file(opts$negative_fn, "gz")
+  } else {
+    neg_seq_fn = opts$negative_fn
+  }
+
+  dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
+  dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
+}
 
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/positive.fa  > /workdir/PFM_scores_positive.txt"))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/negative.fa  > /workdir/PFM_scores_negative.txt"))
