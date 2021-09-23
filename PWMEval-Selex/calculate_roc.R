@@ -4,6 +4,7 @@ library(optparse)
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
 source('/app/seq_preprocessing.R')
+source('/app/arglist_options.R')
 
 # Define Approximate AUC computating function
 auc_approx <- function(pos, neg, top_fraction, n_bins) {
@@ -68,39 +69,22 @@ width = 800
 height = 800
 pointsize = 20
 
-option_list = list(
-  make_option(c("--seq-url"), dest= 'seq_url', type='character', default=NA, help="Use FASTA file located at some URL"),
-  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PFM file located at some URL"),
-  make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
-  make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
-  make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
-  make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
-  make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file"),
-
-  make_option(c("--gz"), dest="compression_gz", default=FALSE, action="store_true", help="Force un-gzipping sequences"),
-  make_option(c("--not-compressed"), dest="compression_no", default=FALSE, action="store_true", help="Prevent un-gzipping sequences"),
-
-  make_option(c("--fastq"), dest='seq_format_fastq', default=FALSE, action="store_true", help="Use FASTQ"),
-  make_option(c("--fasta"), dest='seq_format_fasta', default=FALSE, action="store_true", help="Use FASTA"),
-  
-  make_option(c("--pfm"), default=FALSE, action="store_true", help="Force use of PFM matrix"),
-  make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
-
-  make_option(c("--seq-length"), dest="seq_length", type='integer', default=NA, action="store", metavar="LENGTH", help="Specify length of sequences. All sequences of different length will be rejected."),
-  make_option(c("--allow-iupac"), dest="allow_iupac", default=FALSE, action="store_true", help="Allow IUPAC sequences (by default only ACGT are valid)."),
-  make_option(c("--non-redundant"), dest="non_redundant", default=FALSE, action="store_true", help="Retain only unique sequences."),
-  make_option(c("--flank-5"), dest="flank_5", type='character', default='', help="Append 5'-flanking sequence (adapter+barcode) to sequences"),
-  make_option(c("--flank-3"), dest="flank_3", type='character', default='', help="Append 3'-flanking sequence (adapter+barcode) to sequences"),
-
-  make_option(c("--positive-file"), dest='positive_fn', type='character', default=NA, help="Use prepared positive sequences"),
-  make_option(c("--negative-file"), dest='negative_fn', type='character', default=NA, help="Use prepared negative sequences"),
-
-  make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
-  make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
-  make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
-  make_option(c("--maxnum-reads"), dest="maxnum_reads", type="integer", default=NA, help="Set a maximal number of reads to subsample"),
-  make_option(c("--pseudo-weight"), dest="pseudo_weight", type="double", default=0.0001, help="Set a pseudo-weight to re-normalize the frequencies of the positional-probability matrix (PFM) [default=%default]")
+option_list = c(
+  arglist_sequence_options,
+  arglist_motif_options,
+  list(
+    make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
+    make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]")
+  ),
+  list(
+    make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
+    make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
+    make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
+    make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+    make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
+  )
 )
+
 usage = paste("\n",
               "docker run --rm  -v {PFM}:/motif.pfm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
               "  or\n",
