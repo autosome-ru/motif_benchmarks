@@ -4,7 +4,11 @@ source('/app/utils.R')
 source('/app/seq_preprocessing.R')
 source('/app/arglist_options.R')
 
-option_list = arglist_sequence_options
+option_list = c(
+  arglist_sequence_options,
+  make_option(c("--positive-file"), dest='positive_fn', type='character', default='/sequences/positive.fa.gz', help="Resulting positive sequences filename"),
+  make_option(c("--negative-file"), dest='negative_fn', type='character', default='/sequences/negative.fa.gz', help="Resulting negative sequences filename")
+)
 usage = paste("\n",
               "docker run --rm --entrypoint /app/prepare_sequences.R -v {results}:/sequences -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
               " or\n",

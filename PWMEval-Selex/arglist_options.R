@@ -14,10 +14,7 @@ arglist_sequence_options = list(
   make_option(c("--flank-3"), dest="flank_3", type='character', default='', help="Append 3'-flanking sequence (adapter+barcode) to sequences"),
 
   make_option(c("--seed"), type="integer", default=NA, help="Set a seed for generation of random negative control"),
-  make_option(c("--maxnum-reads"), dest="maxnum_reads", type="integer", default=NA, help="Set a maximal number of reads to subsample"),
-  
-  make_option(c("--positive-file"), dest='positive_fn', type='character', default='/sequences/positive.fa.gz', help="Resulting positive sequences filename"),
-  make_option(c("--negative-file"), dest='negative_fn', type='character', default='/sequences/negative.fa.gz', help="Resulting negative sequences filename")
+  make_option(c("--maxnum-reads"), dest="maxnum_reads", type="integer", default=NA, help="Set a maximal number of reads to subsample")
 )
 
 arglist_motif_options = list(

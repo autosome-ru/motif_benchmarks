@@ -84,7 +84,7 @@ This script accepts all the sequence-oriented options, which accepts the main en
 
 Usage:
 ```
-docker run --rm
+docker run --rm \
     --entrypoint /app/prepare_sequences.R  \
     --volume $(pwd)/JUN_dataset.fastq.gz:/seq.fastq.gz:ro \
     --volume $(pwd)/prepared_sequences/:/sequences/  \
@@ -99,7 +99,7 @@ To get an advantage of these precalculations, the main stage should get these pr
 Usage:
 ```
 docker run --rm \
-    --volume $(pwd)/sequences/:/sequences/:ro \
+    --volume $(pwd)/prepared_sequences/:/sequences/:ro \
     --volume $(pwd)/motif.pcm:/motif.pcm:ro \
     vorontsovie/pwmeval_selex \
         --positive-file /sequences/JUN_pos.fa.gz \

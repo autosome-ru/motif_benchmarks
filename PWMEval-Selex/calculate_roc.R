@@ -71,18 +71,19 @@ pointsize = 20
 
 option_list = c(
   arglist_sequence_options,
+  make_option(c("--positive-file"), dest='positive_fn', type='character', default=NA, help="Precomputed positive sequences filename"),
+  make_option(c("--negative-file"), dest='negative_fn', type='character', default=NA, help="Precomputed negative sequences filename"),
+
   arglist_motif_options,
-  list(
-    make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
-    make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]")
-  ),
-  list(
-    make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
-    make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
-    make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
-    make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
-    make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
-  )
+
+  make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
+  make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
+
+  make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
+  make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
+  make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
+  make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+  make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
 )
 
 usage = paste("\n",
