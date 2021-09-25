@@ -47,5 +47,5 @@ if (endsWith(opts$negative_fn, '.gz')) {
   neg_seq_fn = compress_file(neg_seq_fn, "gz")
 }
 
-dummy <- file.copy(pos_seq_fn, opts$positive_fn)
-dummy <- file.copy(neg_seq_fn, opts$negative_fn)
+dummy <- file.copy(pos_seq_fn, opts$positive_fn, overwrite=TRUE)
+dummy <- file.copy(neg_seq_fn, opts$negative_fn, overwrite=TRUE)
