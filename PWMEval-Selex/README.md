@@ -101,7 +101,7 @@ Usage:
 docker run --rm \
     --volume $(pwd)/prepared_sequences/:/sequences/:ro \
     --volume $(pwd)/motif.pcm:/motif.pcm:ro \
-    vorontsovie/pwmeval_selex \
+    vorontsovie/pwmeval_selex:1.1.0 \
         --positive-file /sequences/JUN_pos.fa.gz \
         --negative-file /sequences/JUN_neg.fa.gz \
         [options]...
