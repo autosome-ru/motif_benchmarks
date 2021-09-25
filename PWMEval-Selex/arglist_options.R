@@ -1,4 +1,5 @@
 arglist_sequence_options = list(
+  make_option(c("--seq"), dest= 'seq_fn', type='character', default=NA, help="Specify FASTA file"),
   make_option(c("--seq-url"), dest= 'seq_url', type='character', default=NA, help="Use FASTA file located at some URL"),
 
   make_option(c("--gz"), dest="compression_gz", default=FALSE, action="store_true", help="Force un-gzipping sequences"),
@@ -18,6 +19,7 @@ arglist_sequence_options = list(
 )
 
 arglist_motif_options = list(
+  make_option(c("--motif"), dest= 'motif_fn', type='character', default=NA, help="Specify motif file"),
   make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PFM file located at some URL"),
   make_option(c("--pfm"), default=FALSE, action="store_true", help="Force use of PFM matrix"),
   make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),

@@ -80,18 +80,36 @@ option_list = c(
   make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
 
   make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
-  make_option(c("--plot-filename"), dest="image_filename", type="character", default="roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
+  make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
-  make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+  make_option(c("--roc-filename"), dest="roc_filename",type="character", default="/results/roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
   make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
 )
 
-usage = paste("\n",
-              "docker run --rm  -v {PFM}:/motif.pfm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
-              "  or\n",
-              "docker run --rm  -v {PFM}:/motif.pfm  -v {Selex FASTA}:/seq[.fa|.fq][.gz]  -v {results}:/results  pwmeval_selex --plot --roc [options]\n",
-              " or\n",
-              "docker run --rm  pwmeval_selex --motif-url {Motif URL} --seq-url {Selex FASTA URL} [options]\n")
+usage = paste(
+  "\n",
+  "docker run --rm \\",
+  "           --volume {Motif matrix}:/motif[.pfm|.pcm]:ro \\",
+  "           --volume {Selex FASTA}:/seq[.fa|.fq][.gz]:ro \\",
+  "           pwmeval_selex \\",
+  "               --seq /seq.fastq.gz \\",
+  "               --motif /motif.pfm \\",
+  "               [options]\n",
+  "  or\n",
+  "docker run --rm  pwmeval_selex --motif-url {Motif URL} --seq-url {Selex FASTA URL} [options]\n",
+  "\n",
+  "If you need output files (typically ROC-curve figures, you should additionally mount results folder), e.g.\n",
+  "docker run --rm \\",
+  "           --volume {Motif matrix}:/motif[.pfm|.pcm]:ro \\",
+  "           --volume {Selex FASTA}:/seq[.fa|.fq][.gz]:ro \\",
+  "           --volume {Results folder}:/results \\",
+  "           pwmeval_selex \\",
+  "               --seq /seq.fa.gz \\",
+  "               --motif /motif.pfm \\",
+  "               --plot  --plot-filename /results/motif_ROC.png \\",
+  "               --roc  --roc-filename /results/motif_ROC.tsv \\",
+  "               [options]\n"
+)
 description = paste("\n",
                     "Note!\n",
                     "  All local paths (for FASTA file, PFM file and results folder) should be absolute.\n",
@@ -99,7 +117,7 @@ description = paste("\n",
                     "  You can use pcm extension for positional count matrices and pfm/pfm for frequency matrices.\n",
                     "  You can use fa/fasta extensions for FASTA files and fq/fastq for FASTQ files.\n",
                     "  Also you can use gz extension for gzipped sequences.\n",
-                    "  So that /seq.fastq.gz is a correct way to pass a gzipped FASTQ file.\n",
+                    "  So that `--seq /seq.fastq.gz` is a correct way to pass a gzipped FASTQ file.\n",
                     "  Options like --fa/--fq, --gz/--not-compressed, --pcm/--pfm override derived format,\n",
                     "  what is especially useful for passing data via url.\n",
                     "  In case when format is specified via options, `/seq` and `/motif` with extension omitted can be used.\n")
@@ -108,7 +126,7 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-dummy = obtain_and_preprocess_motif(opts)
+pfm_motif_filename = obtain_and_preprocess_motif(opts)
 
 if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
   pos_seq_fn = obtain_and_preprocess_sequences(opts)
@@ -122,39 +140,34 @@ if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
 
   pos_seq_fn = append_flanks(pos_seq_fn, opts)
   neg_seq_fn = append_flanks(neg_seq_fn, opts)
-  dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
-  dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
 } else if (is.na(opts$positive_fn) || is.na(opts$negative_fn)) {
   stop("Provide either both positive and negative prepared sequences, or none of them")
 } else {
-  if (endsWith(opts$positive_fn, '.gz')) {
-    pos_seq_fn = decompress_file(opts$positive_fn, "gz")
-  } else {
-    pos_seq_fn = opts$positive_fn
+  pos_seq_fn = opts$positive_fn
+  neg_seq_fn = opts$negative_fn
+  if (endsWith(pos_seq_fn, '.gz')) {
+    pos_seq_fn = decompress_file(pos_seq_fn, "gz")
   }
-
-  if (endsWith(opts$negative_fn, '.gz')) {
-    neg_seq_fn = decompress_file(opts$negative_fn, "gz")
-  } else {
-    neg_seq_fn = opts$negative_fn
+  if (endsWith(neg_seq_fn, '.gz')) {
+    neg_seq_fn = decompress_file(neg_seq_fn, "gz")
   }
-
-  dummy <- file.copy(pos_seq_fn, "/workdir/positive.fa")
-  dummy <- file.copy(neg_seq_fn, "/workdir/negative.fa")
 }
 
-system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/positive.fa  > /workdir/PFM_scores_positive.txt"))
-system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m motif.pfm /workdir/negative.fa  > /workdir/PFM_scores_negative.txt"))
+pos_scores_fn = tempfile('pos_scores')
+neg_scores_fn = tempfile('neg_scores')
 
-POS <- log10(as.numeric(read.table("/workdir/PFM_scores_positive.txt", header=F)[,1]))
-NEG <- log10(as.numeric(read.table("/workdir/PFM_scores_negative.txt", header=F)[,1]))
+system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m", shQuote(pfm_motif_filename), shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
+system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m", shQuote(pfm_motif_filename), shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
+
+POS <- log10(as.numeric(read.table(pos_scores_fn, header=F)[,1]))
+NEG <- log10(as.numeric(read.table(neg_scores_fn, header=F)[,1]))
 
 roc_data <- auc_approx(POS, NEG, opts$top_fraction, opts$num_bins)
 if (opts$plot_image) {
-  plot_roc(roc_data, file.path('/results', opts$image_filename), width = width, height = height, pointsize = pointsize)
+  plot_roc(roc_data, opts$image_filename, width = width, height = height, pointsize = pointsize)
 }
 if (opts$store_roc) {
-  store_roc(roc_data, file.path('/results', opts$roc_filename))
+  store_roc(roc_data, opts$roc_filename)
 }
 
 if (opts$jsonify_results) {

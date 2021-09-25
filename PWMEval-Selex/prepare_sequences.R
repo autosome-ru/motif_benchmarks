@@ -9,17 +9,23 @@ option_list = c(
   make_option(c("--positive-file"), dest='positive_fn', type='character', default='/sequences/positive.fa.gz', help="Resulting positive sequences filename"),
   make_option(c("--negative-file"), dest='negative_fn', type='character', default='/sequences/negative.fa.gz', help="Resulting negative sequences filename")
 )
-usage = paste("\n",
-              "docker run --rm --entrypoint /app/prepare_sequences.R -v {results}:/sequences -v {Selex FASTA}:/seq[.fa|.fq][.gz]  pwmeval_selex [options]\n",
-              " or\n",
-              "docker run --rm --entrypoint /app/prepare_sequences.R -v {results}:/sequences  pwmeval_selex --seq-url {Selex FASTA URL} [options]\n")
+usage = paste(
+  "\n",
+  "docker run --rm \\",
+  "           --entrypoint /app/prepare_sequences.R \\",
+  "           --volume {Selex FASTA/FASTQ}:/seq[.fa|.fq][.gz] \\",
+  "           --volume {results}:/sequences \\",
+  "           pwmeval_selex \\",
+  "             --seq /seq.fa.gz \\",
+  "             [options]\n"
+)
 description = paste("\n",
                     "Note!\n",
                     "  All local paths (for FASTA file and results folder) should be absolute.\n",
                     "  Sequences format can be derived from extension.\n",
                     "  You can use fa/fasta extensions for FASTA files and fq/fastq for FASTQ files.\n",
                     "  Also you can use gz extension for gzipped sequences.\n",
-                    "  So that /seq.fastq.gz is a correct way to pass a gzipped FASTQ file.\n",
+                    "  So that `--seq /seq.fastq.gz` is a correct way to pass a gzipped FASTQ file.\n",
                     "  Options like --fa/--fq, --gz/--not-compressed override derived format,\n",
                     "  what is especially useful for passing data via url.\n",
                     "  In case when format is specified via options, `/seq` with extension omitted can be used.\n")

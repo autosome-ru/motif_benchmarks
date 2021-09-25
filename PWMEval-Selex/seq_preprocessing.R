@@ -116,29 +116,15 @@ subsample_reads <- function(seq_filename, opts) {
   }
 }
 
-find_mounted_sequences_file <- function() {
-  fasta_files = c('/seq.fasta', '/seq.fa', '/seq.fasta.gz', '/seq.fa.gz')
-  fastq_files = c('/seq.fastq', '/seq.fq', '/seq.fastq.gz', '/seq.fq.gz')
-  no_format_files = c('/seq', '/seq.gz')
-  acceptable_seq_files = c(no_format_files, fasta_files, fastq_files)
-  existing_seq_files = file.exists(acceptable_seq_files)
-
-  if (sum(existing_seq_files) == 0) {
-    stop("Provide a file with SELEX sequences. Either mount to /seq or its counterparts, or pass it via URL.")
-  } else if (sum(existing_seq_files) > 1) {
-    stop("Provide the only file with SELEX sequences.")
-  }
-
-  seq_filename = acceptable_seq_files[existing_seq_files][1]
-  return(seq_filename)
-}
-
-
 obtain_and_preprocess_sequences <- function(opts) {
-  if (!is.na(opts$seq_url)) {
+  if (is.na(opts$seq_url) && is.na(opts$seq_fn)) {
+    stop("Specify sequences file or URL.")
+  } else if (!is.na(opts$seq_url) && !is.na(opts$seq_fn)) {
+    stop("You should specify either sequences file or sequences URL, but not both.")
+  } else if (!is.na(opts$seq_url)) {
     seq_filename = download_file(opts$seq_url)
   } else {
-    seq_filename = find_mounted_sequences_file()
+    seq_filename = opts$seq_fn
   }
 
   seq_format_info = refine_seq_format_guess(guess_seq_format(seq_filename), opts)

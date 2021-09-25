@@ -5,6 +5,35 @@ In order to benchmark a motif against SELEX dataset one has to specify a motif i
 
 To run these benchmarks one should supply data files either by mounting local files into container predefined path, or by specifying URL to download these files. As a result it reports ROC AUC at stdout. There are configuration options to return resulting metrics in json format instead of single number (also printed to stdout) and to produce ROC curve plot and coordinates of ROC curve points (FPR and TPR at different thresholds) in separate files.
 
+Usage:
+```
+docker run --rm
+           --volume {Motif matrix}:/motif[.pfm|.pcm]:ro
+           --volume {Selex FASTA}:/seq[.fa|.fq][.gz]:ro
+           pwmeval_selex
+               --seq /seq.fastq.gz
+               --motif /motif.pfm
+               [options]
+```
+
+Also one can pass data via URL:
+```
+docker run --rm  pwmeval_selex --motif-url {Motif URL} --seq-url {Selex FASTA URL} [options]
+```
+
+If you need output files (typically ROC-curve figures, you should additionally mount results folder), e.g.
+```
+docker run --rm
+           --volume {Motif matrix}:/motif[.pfm|.pcm]:ro
+           --volume {Selex FASTA}:/seq[.fa|.fq][.gz]:ro
+           --volume {Results folder}:/results
+           pwmeval_selex
+               --seq /seq.fastq.gz
+               --motif /motif.pfm
+               --plot  --plot-filename /results/motif_ROC.png
+               --roc  --roc-filename /results/motif_ROC.tsv
+               [options]
+```
 
 ## Motif format
 
@@ -99,7 +128,7 @@ To get an advantage of these precalculations, the main stage should get these pr
 Usage:
 ```
 docker run --rm \
-    --volume $(pwd)/prepared_sequences/:/sequences/:ro \
+    --volume $(pwd)/prepared_sequences:/sequences:ro \
     --volume $(pwd)/motif.pcm:/motif.pcm:ro \
     vorontsovie/pwmeval_selex:1.1.0 \
         --positive-file /sequences/JUN_pos.fa.gz \
