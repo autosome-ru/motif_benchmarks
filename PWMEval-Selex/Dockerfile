@@ -1,15 +1,4 @@
 FROM alpine
-LABEL maintainer="vorontsov.i.e@gmail.com"
-ARG BUILD_DATE
-ARG BUILD_VERSION
-
-LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.build-date=$BUILD_DATE
-LABEL org.label-schema.name="PWMEval-Selex"
-LABEL org.label-schema.description="PWMEval-Selex benchmark motif performance to recognize SELEX-like sequences"
-LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Selex"
-LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Selex"
-LABEL org.label-schema.version=$BUILD_VERSION
 
 COPY filter_fasta.cpp pwm_scoring.c seqshuffle.c  /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
@@ -26,5 +15,18 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && rm -rf /var/cache/apk/*
 RUN cd /app && wget https://github.com/shenwei356/seqkit/releases/download/v0.16.0/seqkit_linux_amd64.tar.gz && tar -zxf seqkit_linux_amd64.tar.gz && rm seqkit_linux_amd64.tar.gz
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R prepare_sequences.R arglist_options.R ./add_flanks.sh  /app/
-ENTRYPOINT ["/app/calculate_roc.R"]
+COPY ./evaluate ./prepare ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R arglist_options.R ./add_flanks.sh  /app/
+ENV PATH="/app:${PATH}"
+CMD ["evaluate", "--help"]
+
+ARG BUILD_DATE
+ARG BUILD_VERSION
+
+LABEL maintainer="vorontsov.i.e@gmail.com"
+LABEL org.label-schema.schema-version="1.0"
+LABEL org.label-schema.build-date=$BUILD_DATE
+LABEL org.label-schema.name="PWMEval-Selex"
+LABEL org.label-schema.description="PWMEval-Selex benchmark motif performance to recognize SELEX-like sequences"
+LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Selex"
+LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Selex"
+LABEL org.label-schema.version=$BUILD_VERSION
