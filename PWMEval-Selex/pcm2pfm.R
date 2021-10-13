@@ -1,46 +1,7 @@
 #!/usr/bin/env Rscript
-
-str_is_numeric <- function(str) {
-  return(!is.na(suppressWarnings(as.numeric(str))))
-}
-
-is_matrix_row <- function(str) {
-  terms <- unlist(strsplit(str, '\\s+'))
-  return(all(str_is_numeric(terms)))
-}
-
-parse_matrix <- function(lines) {
-  return(lapply(strsplit(lines, '\\s+'), as.numeric))
-}
-
-print_matrix <- function(matrix) {
-  for(row in matrix) {
-    writeLines(paste(row, collapse='\t'))
-  }
-}
-
-pcm2pfm <- function(pcm) {
-  return(lapply(pcm, function(row){row / sum(row)}))
-}
+source("/app/pcm2pfm_utils.R")
 
 args = commandArgs(trailingOnly = TRUE)
-if (length(args) > 0) {
-  filepath = args[1]
-  con = file(filepath, "r")
-} else {
-  con = file("stdin")
-  open(con)
-}
-lines = suppressWarnings(readLines(con))
-close(con)
-
-has_header = !is_matrix_row(lines[1])
-if (has_header) {
-  writeLines(lines[1])
-  pcm <- parse_matrix(lines[2:length(lines)])
-} else {
-  pcm <- parse_matrix(lines)
-}
-
-pfm <- pcm2pfm(pcm)
-print_matrix(pfm)
+input_filename = if (length(args) > 0) args[1] else "stdin"
+output_filename = if (length(args) > 1) args[2] else "stdout"
+pcm2pfm_files(input_filename, output_filename)

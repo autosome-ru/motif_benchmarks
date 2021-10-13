@@ -1,4 +1,5 @@
 source("/app/utils.R")
+source("/app/pcm2pfm_utils.R")
 
 obtain_and_preprocess_motif <- function(opts) {
   if (is.na(opts$motif_url) && is.na(opts$motif_fn)) {
@@ -42,7 +43,7 @@ refine_motif_format_guess <- function(guessed_format, opts) {
 get_pfm <- function(filename, format) {
   if (format == 'pcm') {
     tmp_fn = tempfile()
-    system(paste("/app/pcm2pfm.R", shQuote(filename), " > ", shQuote(tmp_fn)))
+    pcm2pfm_files(filename, tmp_fn)
     return(tmp_fn)
   } else if (format == 'pfm') {
     return(filename)

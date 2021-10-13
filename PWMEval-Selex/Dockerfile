@@ -15,7 +15,7 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev \
     && rm -rf /var/cache/apk/*
 RUN cd /app && wget https://github.com/shenwei356/seqkit/releases/download/v0.16.0/seqkit_linux_amd64.tar.gz && tar -zxf seqkit_linux_amd64.tar.gz && rm seqkit_linux_amd64.tar.gz
 WORKDIR /workdir/
-COPY ./evaluate ./prepare ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R arglist_options.R ./add_flanks.sh  /app/
+COPY ./evaluate ./prepare ./pcm2pfm.R ./pcm2pfm_utils.R ./utils.R ./motif_preprocessing.R ./seq_preprocessing.R arglist_options.R ./add_flanks.sh  /app/
 ENV PATH="/app:${PATH}"
 CMD ["evaluate", "--help"]
 
