@@ -1,5 +1,4 @@
 #!/usr/bin/env Rscript
-library(rjson)
 library(optparse)
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
@@ -171,6 +170,7 @@ if (opts$store_roc) {
 }
 
 if (opts$jsonify_results) {
+  library(rjson)
   metrics <- list(roc_auc=roc_data$auc)
   supplementary <- list(roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr))
   results <- list(metrics=metrics, supplementary=supplementary)
