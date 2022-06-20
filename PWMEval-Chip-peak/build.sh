@@ -5,8 +5,8 @@ IMAGE_DIR=$(dirname "${BASH_SOURCE[0]}")
 docker build \
        -t vorontsovie/pwmeval_chipseq:latest \
        -t vorontsovie/pwmeval_chipseq:"${BUILD_VERSION}" \
-       --no-cache=true \
        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
        --build-arg BUILD_VERSION="${BUILD_VERSION}" \
+      --no-cache=true \
        -f "${IMAGE_DIR}/Dockerfile" \
        "${IMAGE_DIR}"

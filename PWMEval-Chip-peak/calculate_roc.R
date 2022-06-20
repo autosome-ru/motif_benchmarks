@@ -3,28 +3,27 @@ library('rjson')
 library('optparse')
 library('MASS')
 library('caTools')
-suppressPackageStartupMessages(library('pROC'))
+library('PRROC')
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
 source('/app/peak_preprocessing.R')
 source('/app/assembly_preprocessing.R')
 
-plot_roc <- function(roc_data, image_filename, width = 800, height = 800, pointsize = 20) {
-  png(image_filename, width = width, height = height, pointsize = pointsize)
-  plot(roc_data, main="ROC curve of motif predictor", col = "red", lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
-  txt <- paste("AUC = ", roc_data$auc, sept="")
-  legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
+plot_roc <- function(roc_data, image_filename, width = 800, height = 800) {
+  png(image_filename, width = width, height = height)
+  plot(roc_data, main="ROC curve of motif predictor", lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
+  # txt <- paste("AUC = ", roc_data$auc, sept="")
+  # legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
   dummy <- dev.off()
 }
 
-roc_tpr_fpr <- function(roc_infos) {
-  roc_coords <- coords(roc_infos, 'all', as.list=TRUE, ret=c("sensitivity", "1-specificity"))
-  n_points <- length(roc_coords)
+roc_tpr_fpr <- function(roc_curve) {
+  n_points <- length(roc_curve[,1])
   tpr <- list()
   fpr <- list()
   for(i in 1:n_points) {
-    tpr[[i]] <- roc_coords[[i]]$sensitivity
-    fpr[[i]] <- roc_coords[[i]]$"1-specificity"
+    fpr[[i]] <- roc_curve[i, 1]
+    tpr[[i]] <- roc_curve[i, 2]
   }
   return(list(tpr=unlist(tpr), fpr=unlist(fpr)))
 }
@@ -44,7 +43,6 @@ store_roc <- function(roc_data, output_filename) {
 
 width = 800
 height = 800
-pointsize = 20
 
 option_list = list(
   make_option(c("--assembly-name"), dest='assembly_name', action="store", type='character', default=NA, help="Choose assembly by name"),
@@ -116,23 +114,16 @@ system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/negative.seq  > /w
 
 pos <- as.matrix(read.table("/workdir/positive_PWM.out"))
 neg <- as.matrix(read.table("/workdir/negative_PWM.out"))
-W = wilcox.test(pos, neg, alternative ="g")$statistic
-AUC = W/length(pos)/length(neg)
-pos_labs <- rep(1, length(pos))
-neg_labs <- rep(0, length(neg))
-pos <- cbind(pos, pos_labs)
-neg <- cbind(neg, neg_labs)
-comb_sets <- rbind(pos, neg)
-roc_infos <- roc(response = comb_sets[, 2], predictor = comb_sets[, 1])
-auc = as.numeric(roc_infos$auc) # by default auc is a complex object which is displayed not as a number but number + text
-roc_data <- roc_tpr_fpr(roc_infos)
+roc_infos <- roc.curve(pos, neg, curve=TRUE)
+auc = roc_infos$auc
+roc_data <- roc_tpr_fpr(roc_infos$curve)
 
 if (opts$store_roc) {
   store_roc(roc_data, file.path('/results', opts$roc_filename))
 }
 
 if (opts$plot_image) {
-  plot_roc(roc_infos, opts$image_filename, width = width, height = height, pointsize = pointsize)
+  plot_roc(roc_infos, opts$image_filename, width = width, height = height)
 }
 
 if (opts$jsonify_results) {
