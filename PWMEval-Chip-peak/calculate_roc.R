@@ -9,9 +9,9 @@ source('/app/motif_preprocessing.R')
 source('/app/peak_preprocessing.R')
 source('/app/assembly_preprocessing.R')
 
-plot_roc <- function(roc_data, image_filename, width = 800, height = 800) {
+plot_curve <- function(curve_data, image_filename, width = 800, height = 800) {
   png(image_filename, width = width, height = height)
-  plot(roc_data, main="ROC curve of motif predictor", lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
+  plot(curve_data, lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4)
   # txt <- paste("AUC = ", roc_data$auc, sept="")
   # legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
   dummy <- dev.off()
@@ -28,6 +28,17 @@ roc_tpr_fpr <- function(roc_curve) {
   return(list(tpr=unlist(tpr), fpr=unlist(fpr)))
 }
 
+pr_precision_recall <- function(pr_curve) {
+  n_points <- length(pr_curve[,1])
+  recall <- list()
+  precision <- list()
+  for(i in 1:n_points) {
+    recall[[i]] <- pr_curve[i, 1]
+    precision[[i]] <- pr_curve[i, 2]
+  }
+  return(list(precision=unlist(precision), recall=unlist(recall)))
+}
+
 roc_curve_as_points_list <- function(tpr, fpr) {
   n_bins <- length(tpr)
   roc_curve <- list()
@@ -37,8 +48,21 @@ roc_curve_as_points_list <- function(tpr, fpr) {
   return(roc_curve)
 }
 
+pr_curve_as_points_list <- function(precision, recall) {
+  n_bins <- length(precision)
+  pr_curve <- list()
+  for(i in 1:n_bins) {
+    pr_curve[[i]] <- list(precision=precision[[i]], recall=recall[[i]])
+  }
+  return(pr_curve)
+}
+
 store_roc <- function(roc_data, output_filename) {
-  write.table(list(tpr=roc_data$tpr, fpr=roc_data$fpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
+  write.table(list(fpr=roc_data$fpr, tpr=roc_data$tpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
+}
+
+store_pr <- function(pr_data, output_filename) {
+  write.table(list(recall=pr_data$recall, precision=pr_data$precision), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
 }
 
 width = 800
@@ -58,10 +82,14 @@ option_list = list(
   make_option(c("--gz"), dest="compression_gz_peaks", default=FALSE, action="store_true", help="Force un-gzipping peaks"),
   make_option(c("--not-compressed"), dest="compression_no_peaks", default=FALSE, action="store_true", help="Prevent un-gzipping peaks"),
 
-  make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
-  make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
+  make_option(c("--plot-roc"), dest="plot_roc_image", default=FALSE, action="store_true", help="Plot ROC curve"),
+  make_option(c("--plot-roc-filename"), dest="roc_image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
+  make_option(c("--plot-pr"), dest="plot_pr_image", default=FALSE, action="store_true", help="Plot ROC curve"),
+  make_option(c("--plot-pr-filename"), dest="pr_image_filename", type="character", default="/results/pr_curve.png", help="Specify plot filename [default=%default]"),
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
   make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+  make_option(c("--pr"), dest="store_pr", default=FALSE, action="store_true", help="Store PR curve point"),
+  make_option(c("--pr-filename"), dest="pr_filename",type="character", default="pr_curve.tsv", help="Specify PR curve points filename [default=%default]"),
   make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file"),
 
   make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]")
@@ -115,22 +143,36 @@ system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/negative.seq  > /w
 pos <- as.matrix(read.table("/workdir/positive_PWM.out"))
 neg <- as.matrix(read.table("/workdir/negative_PWM.out"))
 roc_infos <- roc.curve(pos, neg, curve=TRUE)
-auc = roc_infos$auc
+pr_infos <- pr.curve(pos, neg, curve=TRUE)
+roc_auc = roc_infos$auc
+pr_auc = pr_infos$auc.integral
+pr_auc_dg = pr_infos$auc.davis.goadrich
 roc_data <- roc_tpr_fpr(roc_infos$curve)
+pr_data <- pr_precision_recall(pr_infos$curve)
 
 if (opts$store_roc) {
   store_roc(roc_data, file.path('/results', opts$roc_filename))
 }
+if (opts$store_pr) {
+  store_pr(pr_data, file.path('/results', opts$pr_filename))
+}
 
-if (opts$plot_image) {
-  plot_roc(roc_infos, opts$image_filename, width = width, height = height)
+if (opts$plot_roc_image) {
+  plot_curve(roc_infos, opts$roc_image_filename, width = width, height = height)
+}
+if (opts$plot_pr_image) {
+  plot_curve(pr_infos, opts$pr_image_filename, width = width, height = height)
 }
 
 if (opts$jsonify_results) {
-  metrics <- list(roc_auc=auc)
-  supplementary <- list(roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr))
+  metrics <- list(roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
+  supplementary <- list(
+    roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr),
+    pr_curve=pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+  )
   results <- list(metrics=metrics, supplementary=supplementary)
   writeLines(toJSON(results))
 } else{
-  writeLines(as.character(auc))
+  writeLines(as.character(roc_auc))
+  writeLines(as.character(pr_auc))
 }
