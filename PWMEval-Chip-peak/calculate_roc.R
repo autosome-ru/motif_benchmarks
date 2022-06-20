@@ -134,6 +134,7 @@ assembly = obtain_and_preprocess_assembly(opts)
 system(paste("sort -k5,5nr /workdir/peak_centers_scored.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
 system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l 124 -r 125  > /workdir/positive_peaks.bed"))
 system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l -301 -r 550  > /workdir/negative_peaks.bed"))
+system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l 549 -r -300  >> /workdir/negative_peaks.bed"))
 system(paste("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/positive.seq"))
 system(paste("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/negative.seq"))
 
