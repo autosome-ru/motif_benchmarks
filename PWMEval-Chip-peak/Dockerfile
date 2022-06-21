@@ -1,15 +1,4 @@
 FROM alpine
-LABEL maintainer="vorontsov.i.e@gmail.com"
-ARG BUILD_DATE
-ARG BUILD_VERSION
-
-LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.build-date=$BUILD_DATE
-LABEL org.label-schema.name="PWMEval-Chip-Peak"
-LABEL org.label-schema.description="PWMEval-Chip-Peak benchmark motif performance to recognize ChIP-seq peaks"
-LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
-LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
-LABEL org.label-schema.version=$BUILD_VERSION
 
 COPY chrom_sizes.cpp pwm_scoring.c  /source/
 RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev \
@@ -40,5 +29,18 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
     && rm -rf /var/cache/apk/*
 
 WORKDIR /workdir/
-COPY ./calculate_roc.R ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh /app/
-ENTRYPOINT ["/app/calculate_roc.R"]
+COPY ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh ./arglist_options.R ./prepare ./evaluate /app/
+ENV PATH="/app:${PATH}"
+CMD ["evaluate", "--help"]
+
+ARG BUILD_DATE
+ARG BUILD_VERSION
+
+LABEL maintainer="vorontsov.i.e@gmail.com"
+LABEL org.label-schema.schema-version="1.0"
+LABEL org.label-schema.name="PWMEval-Chip-Peak"
+LABEL org.label-schema.description="PWMEval-Chip-Peak benchmark motif performance to recognize ChIP-seq peaks"
+LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
+LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/PWMEval-Chip-peak"
+LABEL org.label-schema.build-date=$BUILD_DATE
+LABEL org.label-schema.version=$BUILD_VERSION

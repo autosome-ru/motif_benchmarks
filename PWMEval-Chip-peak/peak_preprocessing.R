@@ -61,33 +61,45 @@ get_single_points_bed <- function(peak_filename, peak_format) {
   }
 }
 
-find_mounted_peaks_file <- function() {
-  bed_files = c('/peaks.bed', '/peaks.bed.gz')
-  narrowPeak_files = c('/peaks.narrowPeak', '/peaks.narrowPeak.gz')
-  no_format_files = c('/peaks', '/peaks.gz')
-  acceptable_peak_files = c(no_format_files, bed_files, narrowPeak_files)
-  existing_peak_files = file.exists(acceptable_peak_files)
-
-  if (sum(existing_peak_files) == 0) {
-    stop("Provide a file with peaks. Either mount to /peak or its counterparts, or pass it via URL.")
-  } else if (sum(existing_peak_files) > 1) {
-    stop("Provide the only file with peaks.")
-  }
-
-  peak_filename = acceptable_peak_files[existing_peak_files][1]
-  return(peak_filename)
-}
-
-obtain_and_preprocess_peaks <- function(opts) {
-  if (!is.na(opts$peaks_url)) {
+obtain_and_preprocess_peak_centers <- function(opts) {
+  if (is.na(opts$peaks_url) && is.na(opts$peaks_fn)) {
+    stop("Specify peaks file or peaks URL.")
+  } else if (!is.na(opts$peaks_url) && !is.na(opts$peaks_fn)) {
+    stop("You should specify either peaks file or peaks URL, but not both.")
+  } else if (!is.na(opts$peaks_url)) {
     peak_filename = download_file(opts$peaks_url)
   } else {
-    peak_filename = find_mounted_peaks_file()
+    peak_filename = opts$peaks_fn
   }
 
   peaks_format_info = refine_peaks_format_guess(guess_peak_format(peak_filename), opts)
 
   peak_filename = decompress_file(peak_filename, peaks_format_info$compression)
-  peak_filename = get_single_points_bed(peak_filename, peaks_format_info$peak_format)
-  file.copy(peak_filename, "/workdir/peak_centers_scored.bed")
+  peak_centers_filename = get_single_points_bed(peak_filename, peaks_format_info$peak_format)
+  return(peak_centers_filename)
+}
+
+get_top_peaks <- function(peaks_filename, num_top_peaks) {
+  tmp_fn = tempfile()
+  system(paste("sort -k5,5nr ", peaks_filename, " | head -n", num_top_peaks, " > ", shQuote(tmp_fn)))
+  return(tmp_fn)
+}
+
+extend_positive_peaks <- function(peak_centers_filename, assembly) {
+  tmp_fn = tempfile()
+  system(paste("/app/bedtools slop -i ", peak_centers_filename, " -g ", shQuote(assembly$sizes_fn), " -l 124 -r 125  > ", shQuote(tmp_fn)))
+  return(tmp_fn)
+}
+
+extend_negative_peaks <- function(peak_centers_filename, assembly) {
+  tmp_fn = tempfile()
+  system(paste("/app/bedtools slop -i ", peak_centers_filename, " -g ", shQuote(assembly$sizes_fn), " -l -301 -r 550  > ", shQuote(tmp_fn)))
+  system(paste("/app/bedtools slop -i ", peak_centers_filename, " -g ", shQuote(assembly$sizes_fn), " -l 549 -r -300  >> ", shQuote(tmp_fn)))
+  return(tmp_fn)
+}
+
+get_peaks_fasta <- function(peaks_filename, assembly) {
+  tmp_fn = tempfile()
+  system(paste("/app/bedtools getfasta -bed ", peaks_filename, " -fi ", shQuote(assembly$fasta_fn), "  > ", shQuote(tmp_fn)))
+  return(tmp_fn)
 }

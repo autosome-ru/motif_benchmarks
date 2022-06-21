@@ -7,6 +7,5 @@ docker build \
        -t vorontsovie/pwmeval_chipseq:"${BUILD_VERSION}" \
        --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
        --build-arg BUILD_VERSION="${BUILD_VERSION}" \
-      --no-cache=true \
        -f "${IMAGE_DIR}/Dockerfile" \
        "${IMAGE_DIR}"

@@ -1,32 +1,20 @@
 source("/app/utils.R")
 
+
 obtain_and_preprocess_motif <- function(opts) {
-  if (!is.na(opts$motif_url)) {
+  if (is.na(opts$motif_url) && is.na(opts$motif_fn)) {
+    stop("Specify motif file or motif URL.")
+  } else if (!is.na(opts$motif_url) && !is.na(opts$motif_fn)) {
+    stop("You should specify either motif file or motif URL, but not both.")
+  } else if (!is.na(opts$motif_url)) {
     motif_filename = download_file(opts$motif_url)
   } else {
-    motif_filename = find_mounted_motif_file()
+    motif_filename = opts$motif_fn
   }
 
   motif_format = refine_motif_format_guess(guess_motif_format(motif_filename), opts)
-  motif_filename = get_pfm(motif_filename, motif_format)
-  file.copy(motif_filename, "/workdir/motif.pfm")
-}
-
-find_mounted_motif_file <- function() {
-  pfm_files = c('/motif.pfm', '/motif.ppm', '/matrix.pfm', '/matrix.ppm')
-  pcm_files = c('/motif.pcm', '/matrix.pcm')
-  no_format_files = c('/motif', '/matrix')
-  acceptable_motif_files = c(no_format_files, pfm_files, pcm_files)
-  existing_motif_files = file.exists(acceptable_motif_files)
-
-  if (sum(existing_motif_files) == 0) {
-    stop("Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.")
-  } else if (sum(existing_motif_files) > 1) {
-    stop("Provide the only file with positional frequencies/counts matrix")
-  }
-
-  motif_filename = acceptable_motif_files[existing_motif_files][1]
-  return(motif_filename)
+  pfm_motif_filename = get_pfm(motif_filename, motif_format)
+  return(pfm_motif_filename)
 }
 
 guess_motif_format <- function(filename) {

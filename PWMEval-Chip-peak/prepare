@@ -1,0 +1,84 @@
+#!/usr/bin/env Rscript
+library('optparse')
+source('/app/utils.R')
+source('/app/peak_preprocessing.R')
+source('/app/assembly_preprocessing.R')
+source('/app/arglist_options.R')
+
+option_list = c(
+  arglist_peaks_options,
+  arglist_assembly_options,
+  make_option(c("--positive-file"), dest='positive_fn', type='character', default='/sequences/positive.fa', help="Resulting positive sequences filename"),
+  make_option(c("--negative-file"), dest='negative_fn', type='character', default='/sequences/negative.fa', help="Resulting negative sequences filename")
+)
+
+usage = paste(
+  "\n",
+  "docker run --rm \\",
+  "           --volume {Peaks}:/peaks[.bed|.narrowPeak][.gz] \\",
+  "           --volume {assembly folder}:/assembly/ \\",
+  "           pwmeval_chipseq \\",
+  "             prepare \\",
+  "             --peaks /peaks.bed \\",
+  "             --assembly-name {UCSC assembly name} \\",
+  "             --positive-file /sequences/positive.fa --negative-file /sequences/positive.fa \\",
+  "           [options]\n",
+  "  or\n",
+  "docker run --rm  \\",
+  "           -v {assembly folder}:/assembly \\",
+  "           pwmeval_chipseq \\",
+  "             prepare \\",
+  "             --motif-url {Motif URL} \\",
+  "             --peaks-url {Peaks URL} \\",
+  "             --assembly-fasta /assembly/hg38.fa",
+  "             [options]\n",
+  sep="\n")
+
+description = paste("\n",
+                    "Note!\n",
+                    "  All local paths (for peaks file, assembly folder and results folder) should be absolute.\n",
+                    "  Peaks format can be derived from extension.\n",
+                    "  You can use bed/narrowPeak extensions for peaks files.\n",
+                    "  Also you can use gz extension for gzipped peaks.\n",
+                    "  So that /peaks.narrowPeak.gz is a correct way to pass a gzipped narrowPeak file.\n",
+                    "  Options like --bed/--narrowPeak, --gz/--not-compressed override derived format,\n",
+                    "  what is especially useful for passing data via url.\n",
+                    "  In case when format is specified via options, `/peaks` with extension omitted can be used.\n",
+                    "\n",
+                    "  Assembly can be passed as separate files (FASTA, its index and chromosome sizes),\n",
+                    "  or as a folder /assembly with necessary files and assembly name specified. If some of necessary files\n",
+                    "  don't exists, they are calculated on the fly and are stored into /assembly folder.\n",
+                    "  If the folder is mounted to a file system, an assembly and all supplementary files\n",
+                    "  will be stored for reuse in the following runs (first time it'll be slow).\n",
+                    "  --assembly-name [hg38/mm9/...] allows one to choose a necessary genome assembly amongst several ones.\n",
+                    "  If specified assembly doesn't exist in a specified folder, it will be automatically downloaded from UCSC (not always possible).\n",
+                    "  But one should note that if /assembly folder not mounted, genome and supplementary data will live only during container existence.\n",
+                    "\n",
+                    "  Resulting sequences will be stored in /sequences/positive.fa (specified by --positive-file) and /sequences/negative.fa\n",
+                    "  and can be explicitly passed to `evaluate` script.\n"
+                    )
+opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
+opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
+opts <- opts_and_args[[1]]
+args <- opts_and_args[[2]]
+
+assembly = obtain_and_preprocess_assembly(opts)
+peak_centers_filename = obtain_and_preprocess_peak_centers(opts)
+
+top_peaks_fn = get_top_peaks(peak_centers_filename, opts$num_top_peaks)
+pos_peaks_fn = extend_positive_peaks(top_peaks_fn, assembly)
+neg_peaks_fn = extend_negative_peaks(top_peaks_fn, assembly)
+pos_seq_fn = get_peaks_fasta(pos_peaks_fn, assembly)
+neg_seq_fn = get_peaks_fasta(neg_peaks_fn, assembly)
+
+if (endsWith(opts$positive_fn, '.gz')) {
+  pos_seq_fn = compress_file(pos_seq_fn, "gz")
+}
+if (endsWith(opts$negative_fn, '.gz')) {
+  neg_seq_fn = compress_file(neg_seq_fn, "gz")
+}
+
+dir.create(dirname(opts$positive_fn), recursive=TRUE, showWarnings=FALSE)
+dir.create(dirname(opts$negative_fn), recursive=TRUE, showWarnings=FALSE)
+dummy <- file.copy(pos_seq_fn, opts$positive_fn, overwrite=TRUE)
+dummy <- file.copy(neg_seq_fn, opts$negative_fn, overwrite=TRUE)

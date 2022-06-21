@@ -8,6 +8,7 @@ source('/app/utils.R')
 source('/app/motif_preprocessing.R')
 source('/app/peak_preprocessing.R')
 source('/app/assembly_preprocessing.R')
+source('/app/arglist_options.R')
 
 plot_curve <- function(curve_data, image_filename, width = 800, height = 800) {
   png(image_filename, width = width, height = height)
@@ -68,19 +69,14 @@ store_pr <- function(pr_data, output_filename) {
 width = 800
 height = 800
 
-option_list = list(
-  make_option(c("--assembly-name"), dest='assembly_name', action="store", type='character', default=NA, help="Choose assembly by name"),
-  make_option(c("--motif-url"), dest= 'motif_url', type='character', default=NA, help="Use PFM file located at some URL"),
-  make_option(c("--peaks-url"), dest= 'peaks_url', type='character', default=NA, help="Use peaks file located at some URL"),
 
-  make_option(c("--pfm"), default=FALSE, action="store_true", help="Force use of PFM matrix"),
-  make_option(c("--pcm"), default=FALSE, action="store_true", help="Force use of PCM matrix"),
+option_list = c(
+  arglist_peaks_options,
+  arglist_assembly_options,
+  make_option(c("--positive-file"), dest='positive_fn', type='character', default=NA, help="Precomputed positive sequences filename"),
+  make_option(c("--negative-file"), dest='negative_fn', type='character', default=NA, help="Precomputed negative sequences filename"),
 
-  make_option(c("--narrowPeak"), dest='peak_format_narrowPeak', default=FALSE, action="store_true", help="Peaks are formatted in narrowPeak (peaks are reshaped into constant-size peaks around summit of a peak)"),
-  make_option(c("--bed"), dest='peak_format_bed', default=FALSE, action="store_true", help="Peaks are formatted in bed (peaks are reshaped into constant-size peaks around center of a peak)"),
-
-  make_option(c("--gz"), dest="compression_gz_peaks", default=FALSE, action="store_true", help="Force un-gzipping peaks"),
-  make_option(c("--not-compressed"), dest="compression_no_peaks", default=FALSE, action="store_true", help="Prevent un-gzipping peaks"),
+  arglist_motif_options,
 
   make_option(c("--plot-roc"), dest="plot_roc_image", default=FALSE, action="store_true", help="Plot ROC curve"),
   make_option(c("--plot-roc-filename"), dest="roc_image_filename", type="character", default="/results/roc_curve.png", help="Specify plot filename [default=%default]"),
@@ -90,18 +86,49 @@ option_list = list(
   make_option(c("--roc-filename"), dest="roc_filename",type="character", default="roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
   make_option(c("--pr"), dest="store_pr", default=FALSE, action="store_true", help="Store PR curve point"),
   make_option(c("--pr-filename"), dest="pr_filename",type="character", default="pr_curve.tsv", help="Specify PR curve points filename [default=%default]"),
-  make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file"),
-
-  make_option(c("--top"), type="integer", dest="num_top_peaks", default=500, help="Number of top peaks to take [default=%default]")
+  make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
 )
-usage = paste("\n",
-              "docker run --rm  -v {PFM}:/motif.pfm  -v {Peaks}:/peaks[.bed|.narrowPeak][.gz] -v {assembly folder}:/assembly/ pwmeval_chipseq --assembly-name {UCSC assembly name} [options]\n",
-              "  or\n",
-              "docker run --rm  -v {PFM}:/motif.pfm  -v {Peaks}:/peaks[.bed|.narrowPeak][.gz] -v {assembly folder}:/assembly/ -v {results}:/results  pwmeval_chipseq --plot --roc [options]\n",
-              "  or\n",
-              "docker run --rm  -v {assembly FASTA}:/assembly.fa -v {assembly chrom-sizes}:/assembly.chrom.sizes -v {assembly FASTA index}:/assembly.fa.fai  pwmeval_chipseq --motif-url {Motif URL} --peaks-url {Peaks URL} [options]\n",
-              " or\n",
-              "docker run --rm pwmeval_chipseq --motif-url {Motif URL} --peaks-url {Peaks URL} --assembly-name {UCSC assembly name} [options]\n")
+
+usage = paste(
+  "",
+  "docker run --rm \\",
+  "           -v {PFM}:/motif.pfm \\",
+  "           -v {sequences folder}:/sequences \\",
+  "           pwmeval_chipseq \\",
+  "             evaluate \\",
+  "             --motif /motif.pfm \\",
+  "             --positive-file /sequences/positive.fa \\",
+  "             --negative-file /sequences/negative.fa \\",
+  "             [options]",
+  " or",
+  "docker run --rm \\",
+  "           -v {PFM}:/motif.pfm \\",
+  "           -v {Peaks}:/peaks[.bed|.narrowPeak][.gz] \\",
+  "           -v {assembly folder}:/assembly/ \\",
+  "           pwmeval_chipseq \\",
+  "             evaluate \\",
+  "             --motif /motif.pfm \\",
+  "             --peaks /peaks.bed \\",
+  "             --assembly-name {UCSC assembly name} \\",
+  "             [options]",
+  "  or",
+  "docker run --rm \\",
+  "           -v {assembly folder}:/assembly/ \\",
+  "           -v {results}:/results \\",
+  "           pwmeval_chipseq \\",
+  "             evaluate \\",
+  "             --motif-url {Motif URL} \\",
+  "             --peaks-url {Peaks URL} \\",
+  "             --assembly-name {UCSC assembly name} \\",
+  "             --plot-roc --plot-pr --roc --pr [options]",
+  "  or",
+  "docker run --rm  pwmeval_chipseq  evaluate \\",
+  "                   --motif-url {Motif URL} \\",
+  "                   --peaks-url {Peaks URL} \\",
+  "                   --assembly-name {UCSC assembly name} \\",
+  "                   [options]",
+  sep="\n"
+)
 
 description = paste("\n",
                     "Note!\n",
@@ -121,28 +148,52 @@ description = paste("\n",
                     "  will be stored for reuse in the following runs (first time it'll be slow).\n",
                     "  --assembly-name [hg38/mm9/...] allows one to choose a necessary genome assembly amongst several ones.\n",
                     "  If specified assembly doesn't exist in a specified folder, it will be automatically downloaded from UCSC (not always possible).\n",
-                    "  But one should note that if /assembly folder not mounted, genome and supplementary data will live only during container existence")
+                    "  But one should note that if /assembly folder not mounted, genome and supplementary data will live only during container existence",
+                    "\n",
+                    "  It's possible to run `evaluate` without peak files and assembly, it's enough to pass positive and negative sequences FASTA\n",
+                    "  specified by --positive-file/--negative-file options. These files can be prepared using `prepare` script.\n"
+                    )
 opt_parser <- OptionParser(option_list=option_list, usage = usage, description=description);
 opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-dummy = obtain_and_preprocess_motif(opts)
-dummy = obtain_and_preprocess_peaks(opts)
-assembly = obtain_and_preprocess_assembly(opts)
+motif_fn <- obtain_and_preprocess_motif(opts)
 
-system(paste("sort -k5,5nr /workdir/peak_centers_scored.bed | head -n", opts$num_top_peaks, " > /workdir/top_peaks.bed"))
-system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l 124 -r 125  > /workdir/positive_peaks.bed"))
-system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l -301 -r 550  > /workdir/negative_peaks.bed"))
-system(paste("/app/bedtools slop -i /workdir/top_peaks.bed -g ", shQuote(assembly$sizes_fn), " -l 549 -r -300  >> /workdir/negative_peaks.bed"))
-system(paste("/app/bedtools getfasta -bed /workdir/positive_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/positive.seq"))
-system(paste("/app/bedtools getfasta -bed /workdir/negative_peaks.bed -fi ", shQuote(assembly$fasta_fn), "  > /workdir/negative.seq"))
+if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
+  assembly = obtain_and_preprocess_assembly(opts)
+  peak_centers_filename = obtain_and_preprocess_peak_centers(opts)
 
-system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/positive.seq  > /workdir/positive_PWM.out")
-system("/app/pwm_scoring -r -u -m /workdir/motif.pfm /workdir/negative.seq  > /workdir/negative_PWM.out")
+  top_peaks_fn = get_top_peaks(peak_centers_filename, opts$num_top_peaks)
+  pos_peaks_fn = extend_positive_peaks(top_peaks_fn, assembly)
+  neg_peaks_fn = extend_negative_peaks(top_peaks_fn, assembly)
+  pos_seq_fn = get_peaks_fasta(pos_peaks_fn, assembly)
+  neg_seq_fn = get_peaks_fasta(neg_peaks_fn, assembly)
+} else if (is.na(opts$positive_fn) || is.na(opts$negative_fn)) {
+  stop("Provide either both positive and negative prepared sequences, or none of them")
+} else {
+  if (!is.na(opts$peaks_fn) || !is.na(opts$peaks_url) ||
+      !is.na(opts$assembly_name) || !is.na(opts$assembly_fasta_fn) || !is.na(opts$assembly_sizes_fn)) {
+    stop("Provide either prepared sequences, or peaks+assembly to prepare sequences. But not both.")
+  }
+  pos_seq_fn = opts$positive_fn
+  neg_seq_fn = opts$negative_fn
+  if (endsWith(pos_seq_fn, '.gz')) {
+    pos_seq_fn = decompress_file(pos_seq_fn, "gz")
+  }
+  if (endsWith(neg_seq_fn, '.gz')) {
+    neg_seq_fn = decompress_file(neg_seq_fn, "gz")
+  }
+}
 
-pos <- as.matrix(read.table("/workdir/positive_PWM.out"))
-neg <- as.matrix(read.table("/workdir/negative_PWM.out"))
+pos_scores_fn = tempfile('pos_scores')
+neg_scores_fn = tempfile('neg_scores')
+
+system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
+system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
+
+pos <- as.matrix(read.table(pos_scores_fn))
+neg <- as.matrix(read.table(neg_scores_fn))
 roc_infos <- roc.curve(pos, neg, curve=TRUE)
 pr_infos <- pr.curve(pos, neg, curve=TRUE)
 roc_auc = roc_infos$auc
