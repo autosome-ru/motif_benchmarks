@@ -12,12 +12,13 @@ option_list = c(
 usage = paste(
   "\n",
   "docker run --rm \\",
-  "           --entrypoint /app/prepare_sequences.R \\",
   "           --volume {Selex FASTA/FASTQ}:/seq[.fa|.fq][.gz] \\",
   "           --volume {results}:/sequences \\",
   "           pwmeval_selex \\",
+  "             prepare",
   "             --seq /seq.fa.gz \\",
-  "             [options]\n"
+  "             [options]\n",
+  sep = "\n"
 )
 description = paste("\n",
                     "Note!\n",

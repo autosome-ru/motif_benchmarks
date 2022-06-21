@@ -103,11 +103,13 @@ usage = paste(
   "           --volume {Selex FASTA}:/seq[.fa|.fq][.gz]:ro \\",
   "           --volume {Results folder}:/results \\",
   "           pwmeval_selex \\",
+  "               evaluate \\",
   "               --seq /seq.fa.gz \\",
   "               --motif /motif.pfm \\",
   "               --plot  --plot-filename /results/motif_ROC.png \\",
   "               --roc  --roc-filename /results/motif_ROC.tsv \\",
-  "               [options]\n"
+  "               [options]\n",
+  sep = "\n"
 )
 description = paste("\n",
                     "Note!\n",
