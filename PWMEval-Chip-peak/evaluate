@@ -194,18 +194,20 @@ system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(neg_s
 
 pos <- as.matrix(read.table(pos_scores_fn))
 neg <- as.matrix(read.table(neg_scores_fn))
-roc_infos <- roc.curve(pos, neg, curve=TRUE)
-pr_infos <- pr.curve(pos, neg, curve=TRUE)
+should_calculate_roc <- opts$store_roc || opts$plot_roc_image
+should_calculate_pr <- opts$store_pr || opts$plot_pr_image
+roc_infos <- roc.curve(pos, neg, curve=should_calculate_roc)
+pr_infos <- pr.curve(pos, neg, curve=should_calculate_pr)
 roc_auc = roc_infos$auc
 pr_auc = pr_infos$auc.integral
 pr_auc_dg = pr_infos$auc.davis.goadrich
-roc_data <- roc_tpr_fpr(roc_infos$curve)
-pr_data <- pr_precision_recall(pr_infos$curve)
 
 if (opts$store_roc) {
+  roc_data <- roc_tpr_fpr(roc_infos$curve)
   store_roc(roc_data, file.path('/results', opts$roc_filename))
 }
 if (opts$store_pr) {
+  pr_data <- pr_precision_recall(pr_infos$curve)
   store_pr(pr_data, file.path('/results', opts$pr_filename))
 }
 
@@ -218,10 +220,13 @@ if (opts$plot_pr_image) {
 
 if (opts$jsonify_results) {
   metrics <- list(roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
-  supplementary <- list(
-    roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr),
-    pr_curve=pr_curve_as_points_list(pr_data$precision, pr_data$recall)
-  )
+  supplementary <- list()
+  if (opts$store_roc) {
+    supplementary$roc_curve <- roc_curve_as_points_list(roc_data$tpr, roc_data$fpr)
+  }
+  if (opts$store_pr) {
+    supplementary$pr_curve  <- pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+  }
   results <- list(metrics=metrics, supplementary=supplementary)
   writeLines(toJSON(results))
 } else{
