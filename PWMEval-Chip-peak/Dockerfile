@@ -16,20 +16,14 @@ RUN apk add --virtual .builddeps --update  alpine-sdk R-dev python bash zlib-dev
      && rm -r /bedtools \
     && apk add R  ttf-ubuntu-font-family rsync \
     && Rscript -e 'install.packages("remotes", repos="http://cran.us.r-project.org");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/Rcpp/Rcpp_1.0.1.tar.gz");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/plyr/plyr_1.8.4.tar.gz");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/getopt/getopt_1.20.2.tar.gz");' \
        && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/optparse/optparse_1.6.2.tar.gz");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/bitops/bitops_1.0-6.tar.gz");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/caTools/caTools_1.17.1.2.tar.gz");' \
        && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/rjson/rjson_0.2.0.tar.gz");' \
-       && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/Archive/MASS/MASS_7.3-51.4.tar.gz");' \
        && Rscript -e 'remotes::install_url("https://cran.r-project.org/src/contrib/PRROC_1.3.1.tar.gz");' \
     && apk del .builddeps \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /workdir/
-COPY ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh ./arglist_options.R ./prepare ./evaluate /app/
+COPY ./prepare ./evaluate  ./pcm2pfm.R ./utils.R ./motif_preprocessing.R ./peak_preprocessing.R ./assembly_preprocessing.R ./narrowpeak_summit.sh ./peak_center.sh ./download_assembly.sh ./arglist_options.R ./roc_pr_curves.R  /app/
 ENV PATH="/app:${PATH}"
 CMD ["evaluate", "--help"]
 
