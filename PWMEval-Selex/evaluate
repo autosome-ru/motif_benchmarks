@@ -155,6 +155,6 @@ if (opts$jsonify_results) {
   results <- list(metrics=metrics, supplementary=supplementary)
   writeLines(toJSON(results))
 } else{
-  writeLines(as.character(roc_auc))
-  writeLines(as.character(pr_auc))
+  writeLines(paste('ROC', as.character(roc_auc)))
+  writeLines(paste('PR', as.character(pr_auc)))
 }
