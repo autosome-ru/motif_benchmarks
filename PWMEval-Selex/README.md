@@ -108,8 +108,9 @@ Now lets discuss some options to change benchmarking procedure and to provide mo
 When option `--json` is specified, the benchmark's output is not just an ROC AUC value but a JSON object. This format allows one to extend benchmark with several other metrics such as AUPRC or recall@0.1. Also in supplementry section of this JSON object there are a ROC curve points.
 
 The next pair of options requires user to have some folder to be mounted to `/results`. E.g. one can add smth like `--volume $(pwd):/results` - in this case resulting files will be stored in current folder.
-When `--plot` option is specified, benchmark generates a ROC curve plot `roc_curve.png` in that folder. Filename can be overrided using `--plot-filename` option.
+When `--plot-roc` option is specified, benchmark generates a ROC curve plot `roc_curve.png` in that folder. Filename can be overrided using `--plot-filename` option.
 When `--roc` option is specified, benchmark generates a table `roc_curve.tsv` in a tab-separated values format. This file writes out points of ROC curve in (FPR, TPR) coordinates. `--roc-filename` can change a name of resulting file.
+There also exist `--pr`, `--pr-filename`, `--plot-pr`, `--plot-pr-filename` counterparts to plot Precision-Recall curve instead.
 
 Option `--seq-length L` tells that all sequences of different length should be rejected from a file with sequences.
 Option `--allow-iupac` allows sequences to have N-nucleotide, by default all such sequences are rejected.
