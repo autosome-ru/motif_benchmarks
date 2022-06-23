@@ -1,67 +1,16 @@
 #!/usr/bin/env Rscript
 library(optparse)
+library('PRROC')
 source('/app/utils.R')
 source('/app/motif_preprocessing.R')
 source('/app/seq_preprocessing.R')
 source('/app/arglist_options.R')
+source('/app/roc_pr_curves.R')
 
-# Define Approximate AUC computating function
-auc_approx <- function(pos, neg, top_fraction, n_bins) {
-  N = round(top_fraction*length(POS))
-  pos_sorted = sort(pos, decreasing=T)[1:N]
-  neg_sorted = sort(neg, decreasing=T)[1:N]
-
-  # Define common break points for score historgrams (n_bins, the more the better)
-  max = max(pos_sorted, neg_sorted)
-  min = min(pos_sorted, neg_sorted)
-  inc = (max - min) / n_bins
-  breaks = seq(min, max, inc)
-  if (length(breaks) == 1) {
-    return( list(auc=0.5, tpr=c(0, 1), fpr=c(0, 1)) )
-  }
-
-  # Compute density distributions for scores of positives and negative examples
-  # Note: *(max-min)/n_bins) ensures that densities sum to 1!
-  dpos = rev(hist(pos_sorted, breaks=breaks, plot=F)$density * (max-min)/n_bins)
-  dneg = rev(hist(neg_sorted, breaks=breaks, plot=F)$density * (max-min)/n_bins)
-
-  # AUROC computation for binned score values (fast)
-  sens = rep(0, n_bins)
-  fpr  = rep(0, n_bins)
-  sens[1] = dpos[1]
-  fpr[1]  = dneg[1]
-  for(i in 2:n_bins) {
-    sens[i] = sens[i-1] + dpos[i]
-    fpr[i] = fpr[i-1] + dneg[i]
-  }
-  AUC = dneg[1] * 0.5 * (sens[1] - 0)
-  for(i in 2:n_bins) {
-    AUC = AUC + dneg[i] * 0.5 * (sens[i] + sens[i-1])
-  }
-  AUC = max(min(AUC, 1.0), 0.0)
-  return( list(auc=AUC, fpr=fpr, tpr=sens) )
-}
-
-store_roc <- function(roc_data, output_filename) {
-  write.table(list(tpr=roc_data$tpr, fpr=roc_data$fpr), row.names=FALSE, quote=FALSE, sep="\t", file=output_filename)
-}
-
-plot_roc <- function(roc_data, output_filename, width = 800, height = 800, pointsize = 20) {
-  png(output_filename, width = width, height = height, pointsize = pointsize)
-  plot(1 - roc_data$fpr, roc_data$tpr, t="s", col="red", xlab="1-Specificity", ylab="Sensitivity", main="ROC curve of TF motif predictor", 
-      xlim=c(1,0), lwd = 4, cex.axis=1.4, cex.main=1.4, cex.lab=1.4, cex.sub=1.4, family='Liberation')
-  txt <- paste("AUC = ", signif(roc_data$auc, digits = 6), sept="")
-  legend(x="bottomright", legend=txt, col=c("red"), lty=1, lwd=4, cex=1.2)
-  dummy <- dev.off() # store to a variable to suppress a message
-}
-
-roc_curve_as_points_list <- function(tpr, fpr) {
-  n_bins <- length(tpr)
-  roc_curve <- list()
-  for(i in 1:n_bins) {
-    roc_curve[[i]] <- list(tpr=tpr[[i]], fpr=fpr[[i]])
-  }
-  return(roc_curve)
+take_top_fraction <- function(values, top_fraction) {
+  N = round(top_fraction*length(values))
+  top_values = sort(values, decreasing=TRUE)[1:N]
+  return(top_values)
 }
 
 width = 800
@@ -76,12 +25,15 @@ option_list = c(
   arglist_motif_options,
 
   make_option(c("--top"), dest="top_fraction", type="double", default=0.1, help="Fraction of top sequences to take [default=%default]"),
-  make_option(c("--bins"), dest="num_bins", type="integer", default=1000, help="Number of bins for ROC computations [default=%default]"),
 
-  make_option(c("--plot"), dest="plot_image", default=FALSE, action="store_true", help="Plot ROC curve"),
-  make_option(c("--plot-filename"), dest="image_filename", type="character", default="/results/roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
+  make_option(c("--plot-roc"), dest="plot_roc_image", default=FALSE, action="store_true", help="Plot ROC curve"),
+  make_option(c("--plot-pr"), dest="plot_pr_image", default=FALSE, action="store_true", help="Plot PR curve"),
+  make_option(c("--plot-roc-filename"), dest="roc_image_filename", type="character", default="/results/roc_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
+  make_option(c("--plot-pr-filename"), dest="pr_image_filename", type="character", default="/results/pr_curve.png", metavar='FILENAME', help="Specify plot filename [default=%default]"),
   make_option(c("--roc"), dest="store_roc", default=FALSE, action="store_true", help="Store ROC curve point"),
   make_option(c("--roc-filename"), dest="roc_filename",type="character", default="/results/roc_curve.tsv", help="Specify ROC curve points filename [default=%default]"),
+  make_option(c("--pr"), dest="store_pr", default=FALSE, action="store_true", help="Store PR curve point"),
+  make_option(c("--pr-filename"), dest="pr_filename",type="character", default="/results/pr_curve.tsv", help="Specify PR curve points filename [default=%default]"),  
   make_option(c("--json"), dest="jsonify_results", default=FALSE, action="store_true", help="Print results as a json file")
 )
 
@@ -160,23 +112,49 @@ neg_scores_fn = tempfile('neg_scores')
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m", shQuote(pfm_motif_filename), shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
 system(paste("/app/pwm_scoring -r -w", opts$pseudo_weight, "-m", shQuote(pfm_motif_filename), shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
 
-POS <- log10(as.numeric(read.table(pos_scores_fn, header=F)[,1]))
-NEG <- log10(as.numeric(read.table(neg_scores_fn, header=F)[,1]))
+pos <- log10(as.numeric(read.table(pos_scores_fn, header=F)[,1]))
+neg <- log10(as.numeric(read.table(neg_scores_fn, header=F)[,1]))
+pos_top <- take_top_fraction(pos, opts$top_fraction)
+neg_top <- take_top_fraction(neg, opts$top_fraction)
 
-roc_data <- auc_approx(POS, NEG, opts$top_fraction, opts$num_bins)
-if (opts$plot_image) {
-  plot_roc(roc_data, opts$image_filename, width = width, height = height, pointsize = pointsize)
-}
+should_calculate_roc <- opts$store_roc || opts$plot_roc_image
+should_calculate_pr <- opts$store_pr || opts$plot_pr_image
+
+roc_infos <- roc.curve(pos_top, neg_top, curve=should_calculate_roc)
+pr_infos  <-  pr.curve(pos_top, neg_top, curve=should_calculate_pr)
+roc_auc = roc_infos$auc
+pr_auc = pr_infos$auc.integral
+pr_auc_dg = pr_infos$auc.davis.goadrich
+
 if (opts$store_roc) {
+  roc_data <- roc_tpr_fpr(roc_infos$curve)
   store_roc(roc_data, opts$roc_filename)
+}
+if (opts$store_pr) {
+  pr_data <- pr_precision_recall(pr_infos$curve)
+  store_pr(pr_data, opts$pr_filename)
+}
+
+if (opts$plot_roc_image) {
+  plot_curve(roc_infos, opts$roc_image_filename, width = width, height = height)
+}
+if (opts$plot_pr_image) {
+  plot_curve(pr_infos, opts$pr_image_filename, width = width, height = height)
 }
 
 if (opts$jsonify_results) {
   library(rjson)
-  metrics <- list(roc_auc=roc_data$auc)
-  supplementary <- list(roc_curve=roc_curve_as_points_list(roc_data$tpr, roc_data$fpr))
+  metrics <- list(roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
+  supplementary <- list()
+  if (opts$store_roc) {
+    supplementary$roc_curve <- roc_curve_as_points_list(roc_data$tpr, roc_data$fpr)
+  }
+  if (opts$store_pr) {
+    supplementary$pr_curve  <- pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+  }
   results <- list(metrics=metrics, supplementary=supplementary)
   writeLines(toJSON(results))
 } else{
-  writeLines(as.character(roc_data$auc))
+  writeLines(as.character(roc_auc))
+  writeLines(as.character(pr_auc))
 }
