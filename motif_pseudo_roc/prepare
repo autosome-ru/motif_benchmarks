@@ -64,5 +64,6 @@ end
 if options[:background_fn]
   bg_type = options[:background_type]
   bg = background.is_a?(Array) ? background.join(',') : background
+  FileUtils.mkdir_p(File.dirname(options[:background_fn]))
   File.write(options[:background_fn], "#{bg_type}:#{bg}")
 end
