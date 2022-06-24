@@ -16,8 +16,9 @@ RUN apk add --update openjdk8-jre rsync \
 	&& apk del .builddeps
 
 WORKDIR /workdir/
-COPY *.rb *.jar download_assembly.sh  /app/
-ENTRYPOINT ["ruby", "/app/run_console.rb"]
+COPY *.rb *.jar download_assembly.sh prepare evaluate /app/
+ENV PATH="/app:${PATH}"
+CMD ["evaluate", "--help"]
 
 ARG BUILD_DATE
 ARG BUILD_VERSION

@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+require 'fileutils'
+require_relative 'cli_args'
+
+require_relative 'utils'
+require_relative 'motif_preprocessing'
+require_relative 'peak_preprocessing'
+require_relative 'assembly_preprocessing'
+
+require_relative 'background'
+require_relative 'sequence_dataset'
+
+options = {
+  # num_top_peaks: 500,
+  flank_size: 150,
+  pseudocount: :log,
+  word_count: 100,
+  curve_points: false,
+  summit_column: 10,
+  background_type: :di, background: :infer,
+  positive_fn: '/sequences/positive.fa',
+}
+
+option_parser = OptionParser.new{|opts|
+  opts.on('--positive-file FILE', 'Resulting FASTA file with positive sequences'){|filename| options[:positive_fn] = filename }
+  optparse_add_peaks_opts(opts, options)
+  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
+                                "Available values: `infer:mono`, `infer:di`, `mono:<pA>,<pC>,<pG>,<pT>`, `di:<pAA>,<pAC>,...,<pTT>`, " +
+                                "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)"){|value|
+    configure_background!(options, value)
+  }
+
+  opts.on('--curve-points', 'ROC curve points'){ options[:curve_points] = true }
+  # opts.on('--top', "Number of top peaks to take [default=#{options[:num_top_peaks]}]"){ options[:num_top_peaks] = Integer(value) }
+
+}
+
+option_parser.parse!(ARGV)
+
+# We don't need assembly when peaks are provided in FASTA format, thus we can ignore
+# missing `--assembly-name` or not provided `/assembly.fa`.
+# An exception will be triggered later if assembly is needed but absent.
+assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
+
+# negative fasta is not used in this benchmark and not provided!
+positive_fasta_fn = obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+FileUtils.mkdir_p(File.dirname(options[:positive_fn]))
+FileUtils.cp(positive_fasta_fn, options[:positive_fn])

@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 require 'json'
 require 'optparse'
 require_relative 'cli_args'
@@ -21,6 +22,7 @@ options = {
 }
 
 option_parser = OptionParser.new{|opts|
+  opts.on('--positive-file FILE', 'Prepared FASTA file with positive sequences to load (instead of raw peaks)'){|filename| options[:positive_fn] = filename }
   optparse_add_motif_opts(opts, options)
   optparse_add_peaks_opts(opts, options)
   opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
@@ -35,13 +37,17 @@ option_parser = OptionParser.new{|opts|
 
 option_parser.parse!(ARGV)
 
-# We don't need assembly when peaks are provided in FASTA format, thus we can ignore
-# missing `--assembly-name` or not provided `/assembly.fa`.
-# An exception will be triggered later if assembly is needed but absent.
-assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
+if options[:positive_fn]
+  positive_fasta_fn = options[:positive_fn] 
+else
+  # We don't need assembly when peaks are provided in FASTA format, thus we can ignore
+  # missing `--assembly-name` or not provided `/assembly.fa`.
+  # An exception will be triggered later if assembly is needed but absent.
+  assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
 
-# negative fasta is not used in this benchmark and not provided!
-positive_fasta_fn = obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+  # negative fasta is not used in this benchmark and not provided!
+  positive_fasta_fn = obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+end
 
 motif_fn = obtain_and_preprocess_motif!(options, necessary_motif_type: :pwm, default_motif_type: :no_default)
 
