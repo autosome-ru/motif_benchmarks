@@ -27,7 +27,8 @@ option_parser = OptionParser.new{|opts|
   optparse_add_peaks_opts(opts, options)
   opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
                                 "Available values: `infer:mono`, `infer:di`, `mono:<pA>,<pC>,<pG>,<pT>`, `di:<pAA>,<pAC>,...,<pTT>`, " +
-                                "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)"){|value|
+                                "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)." +
+                                "It's also possible to pass file:<filename> to load background from there"){|value|
     configure_background!(options, value)
   }
 

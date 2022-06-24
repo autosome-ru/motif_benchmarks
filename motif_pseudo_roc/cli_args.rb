@@ -26,6 +26,8 @@ def configure_peaks_format!(options, format)
 end
 
 def configure_background!(options, value)
+  return configure_background!(options, File.read(value.sub(/^file:/, ''))) if value.start_with?('file:')
+
   if value == 'uniform'
     options[:background_type] = :mono
     options[:background] = 'uniform'
