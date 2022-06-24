@@ -91,22 +91,6 @@ def entire_peak(peaks_filename, peaks_format_config)
   tmp_file.path
 end
 
-def find_mounted_peaks_file
-  fasta_files = ['/peaks.fa', '/peaks.fa.gz', '/peaks.mfa', '/peaks.mfa.gz']
-  bed_files = ['/peaks.bed', '/peaks.bed.gz']
-  narrowPeak_files = ['/peaks.narrowPeak', '/peaks.narrowPeak.gz']
-  no_format_files = ['/peaks', '/peaks.gz']
-  acceptable_peak_files = [fasta_files, no_format_files, bed_files, narrowPeak_files].flatten
-  existing_peak_files = acceptable_peak_files.select{|fn| File.exist?(fn) }
-
-  if existing_peak_files.empty?
-    raise 'Provide a file with peaks. Either mount to /peak or its counterparts, or pass it via URL.'
-  elsif existing_peak_files.size > 1
-    raise 'Provide the only file with peaks.'
-  end
-  existing_peak_files.first
-end
-
 def slop_peaks(peaks_filename, assembly_sizes_fn, flank_size)
   tmp_file = register_new_tempfile('slop_peaks.bed').tap(&:close)
   system("/app/bedtools slop -i #{peaks_filename.shellescape} -g #{assembly_sizes_fn.shellescape} -l #{flank_size - 1} -r #{flank_size} > #{tmp_file.path.shellescape}")
@@ -121,7 +105,7 @@ end
 
 # control should be formatted FASTA (i.e. with seq length specified in header line)
 def fasta_with_lengths(fasta_fn)
-  tmp_file = register_new_tempfile('peaks_formatted.fa')
+  tmp_file = register_new_tempfile('positive_peaks_formatted.fa')
   File.open(fasta_fn){|f|
     f.each_line.slice_before(/^>/).each{|hdr, *lines|
       seq = lines.map(&:strip).join
@@ -148,7 +132,20 @@ def infer_peaks_format_config(peaks_format, opts)
 end
 
 def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
-  peaks_filename = opts[:peaks_url] ? download_file(opts[:peaks_url]) : find_mounted_peaks_file
+  if opts[:peaks_fn]
+    if !opts[:peaks_url]
+      peaks_filename = opts[:peaks_fn]
+    else
+      raise "Specify only one of peaks URL and peaks filename"
+    end
+  else # !opts[:peaks_fn]
+    if opts[:peaks_url]
+      peaks_filename = download_file(opts[:peaks_url])
+    else
+      raise "Specify one of peaks URL and peaks filename"
+    end
+  end
+
   peaks_format_info = refine_peaks_format_guess(guess_peaks_format(peaks_filename), opts)
   peaks_format = peaks_format_info[:peaks_format] # bed/narrowPeak/custom/fasta
 
@@ -175,6 +172,6 @@ def obtain_and_preprocess_peak_sequences!(opts, assembly_infos)
     peaks_filename = fasta_by_bed_peaks(peaks_filename, assembly_infos[:fasta_fn])
   end
 
-  peaks_filename = fasta_with_lengths(peaks_filename)
-  FileUtils.cp(peaks_filename, "/workdir/positive.fa")
+  positive_peaks_fasta_filename = fasta_with_lengths(peaks_filename)
+  positive_peaks_fasta_filename
 end

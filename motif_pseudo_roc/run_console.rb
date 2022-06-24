@@ -5,7 +5,6 @@ require_relative 'utils'
 require_relative 'motif_preprocessing'
 require_relative 'peak_preprocessing'
 require_relative 'assembly_preprocessing'
-# require 'bioinform'
 
 require_relative 'background'
 require_relative 'sequence_dataset'
@@ -24,8 +23,10 @@ options = {
 }
 
 option_parser = OptionParser.new{|opts|
+  opts.on('--motif FILE', 'Motif PFM file'){|filename| options[:motif_fn] = filename }
   opts.on('--motif-url URL', 'Use PFM file located at some URL'){|url| options[:motif_url] = url }
 
+  opts.on('--peaks FILE', 'Peaks file'){|filename| options[:peaks_fn] = filename }
   opts.on('--peaks-url URL', 'Use peaks file located at some URL'){|url| options[:peaks_url] = url }
   opts.on('--assembly-name NAME', 'Choose assembly by name') {|value| options[:assembly_name] = value }
 
@@ -124,11 +125,13 @@ option_parser.parse!(ARGV)
 # An exception will be triggered later if assembly is needed but absent.
 assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
 
-obtain_and_preprocess_motif!(options, necessary_motif_type: :pwm, default_motif_type: :no_default)
-obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+motif_fn = obtain_and_preprocess_motif!(options, necessary_motif_type: :pwm, default_motif_type: :no_default)
+
+# negative fasta is not used in this benchmark and not provided!
+positive_fasta_fn = obtain_and_preprocess_peak_sequences!(options, assembly_infos)
 
 if options[:background] == :infer
-  dataset = SequenceDataset.new('/workdir/positive.fa')
+  dataset = SequenceDataset.new(positive_fasta_fn)
   if options[:background_type] == :mono
     background = local_mono_background(dataset).join(',')
   elsif options[:background_type] == :di
@@ -140,23 +143,14 @@ else
   background = options[:background]
 end
 
+thresholds_fn = get_motif_thresholds(motif_fn, background_type: options[:background_type], background: background)
 
-motif_length = read_matrix('/workdir/motif.pwm', num_columns: 4)[:matrix].length
 sarus_class = 'ru.autosome.SARUS'
-
-if options[:background_type] == :mono
-  ape_class = 'ru.autosome.ape.PrecalculateThresholds'
-  system("java -cp /app/ape.jar #{ape_class} /workdir/motif.pwm --single-motif --background #{background} > /workdir/motif.thr")
-elsif options[:background_type] == :di
-  ape_class = 'ru.autosome.ape.di.PrecalculateThresholds'
-  system("java -cp /app/ape.jar #{ape_class} /workdir/motif.pwm --single-motif --background #{background} --from-mono > /workdir/motif.thr")
-else
-  raise "Should not be here"
-end
+motif_length = read_matrix(motif_fn, num_columns: 4)[:matrix].length
 
 auc_opts = []
 auc_opts << '--curve-points'  if options[:curve_points]
 auc_opts = auc_opts.join(' ')
-system("java -cp /app/sarus.jar #{sarus_class}  /workdir/positive.fa  /workdir/motif.pwm  besthit " +
-    " --output-scoring-mode pvalue --pvalues-file /workdir/motif.thr  --add-flanks" +
+system("java -cp /app/sarus.jar #{sarus_class}  #{positive_fasta_fn}  #{motif_fn}  besthit " +
+    " --output-scoring-mode pvalue --pvalues-file #{thresholds_fn}  --add-flanks" +
     " | ruby /app/calculate_auc.rb #{motif_length} - #{auc_opts} ")
