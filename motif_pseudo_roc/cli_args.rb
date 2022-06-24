@@ -53,6 +53,23 @@ def configure_background!(options, value)
   end
 end
 
+def configure_num_top_peaks!(options, value)
+  if value.downcase == 'all'
+    options[:top_peaks] = {num_peaks: 'all'}
+  elsif value.match?(/^\d+$/) # take original order (by line number)
+    options[:top_peaks] = {num_peaks: Integer(value)}
+  elsif value.match?(/^\d+:by:\d+:(max|min)$/) # top X peaks by Y column, take min/max values
+    top_peaks_config = value.match(/^(?<amount>\d+):by:(?<column>\d+):(?<order>(max|min))$/).named_captures
+    options[:top_peaks] = {
+      num_peaks: Integer(top_peaks_config['amount']),
+      order_by_column: Integer(top_peaks_config['column']),
+      order: top_peaks_config['order'],
+    }
+  else
+    raise "Unknown value for number of top peaks"
+  end
+end
+
 def optparse_add_motif_opts(opts, options)
   opts.on('--motif FILE', 'Motif PFM file'){|filename| options[:motif_fn] = filename }
   opts.on('--motif-url URL', 'Use PFM file located at some URL'){|url| options[:motif_url] = url }
@@ -64,6 +81,9 @@ def optparse_add_peaks_opts(opts, options)
   opts.on('--peaks FILE', 'Peaks file'){|filename| options[:peaks_fn] = filename }
   opts.on('--peaks-url URL', 'Use peaks file located at some URL'){|url| options[:peaks_url] = url }
   opts.on('--assembly-name NAME', 'Choose assembly by name') {|value| options[:assembly_name] = value }
+  opts.on('--top VALUE', "Number of top peaks to take. Possible values: `all` or `<number>` or `<number>:by:<column>:<max|min>` [default=#{options[:num_top_peaks]}]"){|value|
+    configure_num_top_peaks!(options, value)
+  }
 
   opts.on('--narrowPeak', 'Peaks are formatted in narrowPeak (peaks are reshaped into constant-size peaks around summit of a peak)'){
     options[:peaks_format] = :narrowPeak

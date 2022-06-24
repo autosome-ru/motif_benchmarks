@@ -13,7 +13,7 @@ require_relative 'background'
 require_relative 'sequence_dataset'
 
 options = {
-  # num_top_peaks: 500,
+  top_peaks: {num_peaks: 'all'},
   flank_size: 150,
   summit_column: 10,
   background_type: :di, background: :infer,
@@ -26,15 +26,13 @@ option_parser = OptionParser.new{|opts|
     options[:background_fn] = filename
   }
   optparse_add_peaks_opts(opts, options)
-  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
+  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " +
                                 "Available values: `infer:mono`, `infer:di`, `mono:<pA>,<pC>,<pG>,<pT>`, `di:<pAA>,<pAC>,...,<pTT>`, " +
                                 "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)"){|value|
     configure_background!(options, value)
   }
 
   opts.on('--curve-points', 'ROC curve points'){ options[:curve_points] = true }
-  # opts.on('--top', "Number of top peaks to take [default=#{options[:num_top_peaks]}]"){ options[:num_top_peaks] = Integer(value) }
-
 }
 
 option_parser.parse!(ARGV)

@@ -12,7 +12,7 @@ require_relative 'background'
 require_relative 'sequence_dataset'
 
 options = {
-  # num_top_peaks: 500,
+  top_peaks: {num_peaks: 'all'},
   flank_size: 150,
   pseudocount: :log,
   word_count: 100,
@@ -25,7 +25,7 @@ option_parser = OptionParser.new{|opts|
   opts.on('--positive-file FILE', 'Prepared FASTA file with positive sequences to load (instead of raw peaks)'){|filename| options[:positive_fn] = filename }
   optparse_add_motif_opts(opts, options)
   optparse_add_peaks_opts(opts, options)
-  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " + 
+  opts.on('--background VALUE', "One can specify mono/dinucleotide background inferred from (di)nucleotide frequencies in dataset or can use custom background. " +
                                 "Available values: `infer:mono`, `infer:di`, `mono:<pA>,<pC>,<pG>,<pT>`, `di:<pAA>,<pAC>,...,<pTT>`, " +
                                 "`gc:<GC content in [0,1] range>` or `uniform`. (Default: `infer:di`)." +
                                 "It's also possible to pass file:<filename> to load background from there"){|value|
@@ -39,7 +39,7 @@ option_parser = OptionParser.new{|opts|
 option_parser.parse!(ARGV)
 
 if options[:positive_fn]
-  positive_fasta_fn = options[:positive_fn] 
+  positive_fasta_fn = options[:positive_fn]
 else
   # We don't need assembly when peaks are provided in FASTA format, thus we can ignore
   # missing `--assembly-name` or not provided `/assembly.fa`.
