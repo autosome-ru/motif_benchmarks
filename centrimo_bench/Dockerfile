@@ -13,7 +13,19 @@ RUN apt-get update && \
     apt-get remove --yes build-essential && \
     apt-get autoremove --yes && \
     rm -rf /var/lib/apt/lists/*
-RUN mkdir /workdir && chmod ugo+rwx /workdir
-WORKDIR /workdir/
-COPY *.rb /app/
-ENTRYPOINT ["ruby", "/app/run_console.rb"]
+
+COPY *.rb prepare evaluate /app/
+ENV PATH="/app:${PATH}"
+CMD ["evaluate", "--help"]
+
+ARG BUILD_DATE
+ARG BUILD_VERSION
+
+LABEL maintainer="vorontsov.i.e@gmail.com"
+LABEL org.label-schema.schema-version="1.0"
+LABEL org.label-schema.name="centrimo_bench"
+LABEL org.label-schema.description="centrimo_bench benchmark motif performance to recognize ChIP-seq peaks"
+LABEL org.label-schema.url="https://github.com/autosome-ru/motif_benchmarks/tree/master/centrimo_bench"
+LABEL org.label-schema.vcs-url="https://github.com/autosome-ru/motif_benchmarks/tree/master/centrimo_bench"
+LABEL org.label-schema.build-date=$BUILD_DATE
+LABEL org.label-schema.version=$BUILD_VERSION
