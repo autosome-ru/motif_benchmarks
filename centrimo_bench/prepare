@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'optparse'
+require 'shellwords'
+require 'fileutils'
+
+require_relative 'cli_args'
+require_relative 'utils'
+require_relative 'motif_preprocessing'
+require_relative 'peak_preprocessing'
+require_relative 'assembly_preprocessing'
+
+
+# Resulting values are intentionally left as strings, not numbers. That's because some of values can be
+# e.g. "1.5e-436" which can't be converted to float without loss of precision
+def read_centrimo_results(filename)
+  lines = File.readlines(filename).map(&:chomp)
+  row = lines[1].split("\t").map(&:strip)
+  db_index, motif_id, motif_alt_id, consensus, evalue, adj_pvalue, log_adj_pvalue, \
+    bin_location, bin_width, total_width, sites_in_bin, total_sites, p_success, pvalue, mult_tests = *row
+  {
+    motif_id: motif_id, consensus: consensus,
+    evalue: evalue, adj_pvalue: adj_pvalue, log_adj_pvalue: log_adj_pvalue,
+    bin_location: bin_location, bin_width: bin_width, total_width: total_width, sites_in_bin: sites_in_bin,
+    total_sites: total_sites, p_success: p_success, pvalue: pvalue, mult_tests: mult_tests,
+  }
+end
+
+# aka `concentration`
+def central_probability(sites, motif_length:, sequence_length:, total_sites:, window_size: 20)
+  start = (0.5 * (sequence_length - motif_length - 1) - 0.5 * window_size).ceil
+  stop = start + window_size
+  sites[start .. stop].sum(0.0) / total_sites
+end
+
+options = {
+  flank_size: 250,
+  summit_column: 10,
+  top_peaks: {num_peaks: 'all'},
+  positive_fn: '/sequences/positive.fa',
+}
+
+option_parser = OptionParser.new{|opts|
+  opts.on('--positive-file FILE', 'Resulting FASTA file with positive sequences'){|filename| options[:positive_fn] = filename }
+  optparse_add_peaks_opts(opts, options)
+}
+
+option_parser.parse!(ARGV)
+
+# We don't need assembly when peaks are provided in FASTA format, thus we can ignore
+# missing `--assembly-name` or not provided `/assembly.fa`.
+# An exception will be triggered later if assembly is needed but absent.
+assembly_infos = obtain_and_preprocess_assembly!(options, necessary: false)
+positive_fasta_fn = obtain_and_preprocess_peak_sequences!(options, assembly_infos)
+
+FileUtils.mkdir_p(File.dirname(options[:positive_fn]))
+FileUtils.cp(positive_fasta_fn, options[:positive_fn])

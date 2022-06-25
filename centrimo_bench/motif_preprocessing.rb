@@ -18,7 +18,19 @@ def read_matrix(fn, num_columns: 4)
 end
 
 def obtain_and_preprocess_motif!(opts, necessary_motif_type:, default_motif_type:)
-  motif_filename = opts[:motif_url] ? download_file(opts[:motif_url]) : find_mounted_motif_file
+  if opts[:motif_fn]
+    if !opts[:motif_url]
+      motif_filename = opts[:motif_fn]
+    else
+      raise "Specify only one of motif URL and motif filename"
+    end
+  else # !opts[:motif_fn]
+    if opts[:motif_url]
+      motif_filename = download_file(opts[:motif_url])
+    else
+      raise "Specify one of motif URL and motif filename"
+    end
+  end
 
   motif_format = refine_motif_format_guess(guess_motif_format(motif_filename, default_motif_type: default_motif_type), opts)
   case necessary_motif_type
@@ -31,22 +43,7 @@ def obtain_and_preprocess_motif!(opts, necessary_motif_type:, default_motif_type
   else
     raise "Unknown motif format #{necessary_motif_type}"
   end
-  FileUtils.cp(motif_filename, "/workdir/motif.#{necessary_motif_type}")
-end
-
-def find_mounted_motif_file
-  pfm_files = ['/motif.pfm', '/motif.ppm', '/matrix.pfm', '/matrix.ppm']
-  pcm_files = ['/motif.pcm', '/matrix.pcm']
-  no_format_files = ['/motif', '/matrix']
-  acceptable_motif_files = [no_format_files, pfm_files, pcm_files].flatten
-  existing_motif_files = acceptable_motif_files.select{|fn| File.exist?(fn) }
-
-  if existing_motif_files.size == 0
-    raise 'Provide a file with positional frequencies/counts matrix. Either mount to /motif or its counterparts, or pass it via URL.'
-  elsif existing_motif_files.size > 1
-    raise 'Provide the only file with positional frequencies/counts matrix'
-  end
-  existing_motif_files.first
+  motif_filename
 end
 
 def guess_motif_format(filename, default_motif_type:)
