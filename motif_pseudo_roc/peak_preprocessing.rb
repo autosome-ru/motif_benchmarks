@@ -134,25 +134,34 @@ end
 def get_top_peaks(peaks_filename, top_peaks_config)
   num_peaks = top_peaks_config[:num_peaks]
   return peaks_filename  if num_peaks == 'all'
+  num_peaks = Integer(num_peaks)
 
-  tmp_file = register_new_tempfile("top_peaks.#{File.extname(peaks_filename)}").tap(&:close)
+  tmp_file = register_new_tempfile("top_peaks.#{File.extname(peaks_filename)}")
 
+  peaks = File.readlines(peaks_filename).reject{|l|
+    l.start_with?('#')
+  }
   if top_peaks_config[:order]
+    column = Integer(top_peaks_config[:order_by_column]) - 1  # 1-based column indices
+    peaks = peaks.sort_by{|l|
+      row = l.split("\t")
+      Float(row[column])
+    }
     case top_peaks_config[:order]
-    when 'max'
-      order = 'r'
     when 'min'
-      order = ''
+      peaks = peaks.first(num_peaks)
+    when 'max'
+      peaks = peaks.reverse.first(num_peaks)
     else
       raise "Shouldn't be here"
     end
-    column = top_peaks_config[:order_by_column]
-    cmd = "cat #{peaks_filename} | grep -ve '^#' | sort -t '\t' -k#{column},#{column}n#{order} | head -n #{num_peaks} > #{tmp_file.path}"
-  else
-    cmd = "cat #{peaks_filename} | grep -ve '^#' | head -n #{num_peaks} > #{tmp_file.path}"
+  else # order not specified — just take first lines
+    peaks = peaks.first(num_peaks)
   end
 
-  system(cmd)
+  peaks.each{|l|
+    tmp_file.puts(l)
+  }
   tmp_file.close
   tmp_file.path
 end
