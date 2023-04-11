@@ -3,6 +3,8 @@
 
 Here we present several containerized benchmarks which can be used to assess performance of positional frequency matrices on ChIP-seq, SELEX and PBM datasets.
 
+See paper [Insights gained from a comprehensive all-against-all transcription factor binding motif benchmarking study](https://doi.org/10.1186/s13059-020-01996-3).
+
 More info can be found in dedicated sections.
 
 ## Available benchmarks
