@@ -2,11 +2,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 import org.json.simple.JSONObject;
 
@@ -153,17 +149,16 @@ public class PWMBench {
         return new Entry(new DataSet("", seqs), vals.toArray());
     }
 
-    private static double score(PFMWrapperTrainSM model, DataSet data, double[] vals, Scoring scoring) throws Exception{
-
+    private static double[] getPredictions(PFMWrapperTrainSM model, DataSet data) throws Exception {
         double[] preds = new double[data.getNumberOfElements()];
-        for(int i=0;i<data.getNumberOfElements();i++){
+        for(int i = 0; i< data.getNumberOfElements(); i++){
 
             Sequence seq = data.getElementAt(i);
 
-            double[] temp = new double[(seq.getLength()-model.getLength()+1)*2];
+            double[] temp = new double[(seq.getLength()- model.getLength()+1)*2];
 
             for(int j=0,k=0;j<2;j++){
-                for(int l=0;l<seq.getLength()-model.getLength()+1;l++,k++){
+                for(int l = 0; l<seq.getLength()- model.getLength()+1; l++,k++){
                     temp[k] = model.getLogScoreFor(seq, l);
                 }
                 seq = seq.reverseComplement();
@@ -171,9 +166,16 @@ public class PWMBench {
 
             preds[i] = Normalisation.getLogSum(temp);
         }
+        return preds;
+    }
 
+    private static double score(PFMWrapperTrainSM model, DataSet data, double[] vals, Scoring scoring) throws Exception {
+        double[] preds = getPredictions(model, data);
+        return score(model, data, vals, scoring, preds);
+    }
+
+    private static double score(PFMWrapperTrainSM model, DataSet data, double[] vals, Scoring scoring, double[] preds) throws Exception {
         if(scoring == Scoring.ROC || scoring == Scoring.PR || scoring == Scoring.ROCLOG || scoring == Scoring.PRLOG) {
-
             vals = vals.clone();
             if(scoring == Scoring.ROCLOG || scoring == Scoring.PRLOG) {
                 double mi = ToolBox.min(vals);
@@ -199,7 +201,7 @@ public class PWMBench {
             for(int i=0;i<vals.length;i++) {
                 if(vals[i] >= t) {
                     pos.add(preds[i]);
-                }else {
+                } else {
                     neg.add(preds[i]);
                 }
             }
@@ -210,7 +212,7 @@ public class PWMBench {
             if(scoring == Scoring.ROC || scoring == Scoring.ROCLOG) {
                 AucROC roc = new AucROC();
                 return (double)roc.compute(pos.toArray(), neg.toArray()).getResultAt(0).getValue();
-            }else {
+            } else {
                 AucPR pr = new AucPR();
                 return (double)pr.compute(pos.toArray(), neg.toArray()).getResultAt(0).getValue();
             }
@@ -222,16 +224,14 @@ public class PWMBench {
 					preds[i] = Math.exp(preds[i]-mi);
 				}
 			} else if(scoring == Scoring.LOG) {
-				vals = vals.clone();
-				double mi = ToolBox.min(vals);
-				for(int i=0;i<vals.length;i++) {
-					vals[i] = Math.log(vals[i]-mi+1.0);
-				}
-			}
-
-			return ToolBox.pearsonCorrelation(vals, preds);
+                vals = vals.clone();
+                double mi = ToolBox.min(vals);
+                for (int i = 0; i < vals.length; i++) {
+                    vals[i] = Math.log(vals[i] - mi + 1.0);
+                }
+            }
+            return ToolBox.pearsonCorrelation(vals, preds);
 		} else {
-
 			HashMap<String, DoubleList[]> merMap = new HashMap<String, DoubleList[]>();
 			double mi = ToolBox.min(vals);
 
@@ -266,15 +266,25 @@ public class PWMBench {
 			}
 
 			return ToolBox.pearsonCorrelation(meanVals, meanPreds);
-
 		}
     }
 
     public static void printScoringMetrics(Entry entry, PFMWrapperTrainSM model, String scoringMode) throws Exception {
-        if (scoringMode.equals("all")) {
+        String[] scoringListStrings = scoringMode.split(",");
+        if (scoringMode.equals("all") || (scoringListStrings.length > 1)) {
+            List<Scoring> scoringList;
+            if (scoringMode.equals("all")) {
+                scoringList = Arrays.asList(Scoring.values());
+            } else {
+                scoringList = new ArrayList<>();
+                for (String singleScoringMode: scoringListStrings) {
+                    scoringList.add(Scoring.valueOf(singleScoringMode));
+                }
+            }
             Map<String, Double> result = new HashMap<String, Double>();
-            for (Scoring scoring : Scoring.values()) {
-                double score = score(model, entry.data, entry.vals, scoring);
+            double[] preds = getPredictions(model, entry.data);
+            for (Scoring scoring : scoringList) {
+                double score = score(model, entry.data, entry.vals, scoring, preds.clone());
                 result.put(scoring.toString(), score);
             }
             System.out.println(new JSONObject(result));
@@ -297,7 +307,6 @@ public class PWMBench {
                 printScoringMetrics(entry, model, args[0]);
             }
             scanner.close();
-
         } else {
             PFMWrapperTrainSM model = parsePlainMotif(args[2]);
             printScoringMetrics(entry, model, args[0]);
