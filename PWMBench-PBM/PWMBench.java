@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.json.simple.JSONObject;
 
@@ -269,10 +270,8 @@ public class PWMBench {
 		}
     }
 
-    public static void main(String[] args) throws Exception {
-        Entry entry = readData(args[1]);
-        PFMWrapperTrainSM model = parsePlainMotif(args[2]);
-        if (args[0].equals("all")) {
+    public static void printScoringMetrics(Entry entry, PFMWrapperTrainSM model, String scoringMode) throws Exception {
+        if (scoringMode.equals("all")) {
             Map<String, Double> result = new HashMap<String, Double>();
             for (Scoring scoring : Scoring.values()) {
                 double score = score(model, entry.data, entry.vals, scoring);
@@ -280,9 +279,28 @@ public class PWMBench {
             }
             System.out.println(new JSONObject(result));
         } else {
-            Scoring scoring = Scoring.valueOf(args[0]);
+            Scoring scoring = Scoring.valueOf(scoringMode);
             double score = score(model, entry.data, entry.vals, scoring);
             System.out.println(score);
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        String datasetFilename = args[1];
+        Entry entry = readData(datasetFilename);
+        if (args[2].equals("-")) {
+            Scanner scanner = new Scanner(System.in);
+            while (scanner.hasNextLine()) {
+                String motifFilename = scanner.nextLine();
+                PFMWrapperTrainSM model = parsePlainMotif(motifFilename);
+                System.out.print(datasetFilename + "\t" + motifFilename + "\t");
+                printScoringMetrics(entry, model, args[0]);
+            }
+            scanner.close();
+
+        } else {
+            PFMWrapperTrainSM model = parsePlainMotif(args[2]);
+            printScoringMetrics(entry, model, args[0]);
         }
     }
 }
