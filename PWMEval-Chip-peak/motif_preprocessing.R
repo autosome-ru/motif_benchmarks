@@ -11,7 +11,11 @@ obtain_and_preprocess_motif <- function(opts) {
   } else {
     motif_filename = opts$motif_fn
   }
+  pfm_motif_filename = preprocess_motif(motif_filename, opts)
+  return(pfm_motif_filename)
+}
 
+preprocess_motif <- function(motif_filename, opts) {
   motif_format = refine_motif_format_guess(guess_motif_format(motif_filename), opts)
   pfm_motif_filename = get_pfm(motif_filename, motif_format)
   return(pfm_motif_filename)

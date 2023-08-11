@@ -100,8 +100,6 @@ opts_and_args <- parse_args(opt_parser, positional_arguments=TRUE);
 opts <- opts_and_args[[1]]
 args <- opts_and_args[[2]]
 
-motif_fn <- obtain_and_preprocess_motif(opts)
-
 if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
   assembly = obtain_and_preprocess_assembly(opts)
   peak_centers_filename = obtain_and_preprocess_peak_centers(opts)
@@ -128,51 +126,106 @@ if (is.na(opts$positive_fn) && is.na(opts$negative_fn)) {
   }
 }
 
-pos_scores_fn = tempfile('pos_scores')
-neg_scores_fn = tempfile('neg_scores')
-
-system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
-system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
-
-pos <- as.matrix(read.table(pos_scores_fn))
-neg <- as.matrix(read.table(neg_scores_fn))
-should_calculate_roc <- opts$store_roc || opts$plot_roc_image
-should_calculate_pr <- opts$store_pr || opts$plot_pr_image
-roc_infos <- roc.curve(pos, neg, curve=should_calculate_roc)
-pr_infos <- pr.curve(pos, neg, curve=should_calculate_pr)
-roc_auc = roc_infos$auc
-pr_auc = pr_infos$auc.integral
-pr_auc_dg = pr_infos$auc.davis.goadrich
-
-if (opts$store_roc) {
-  roc_data <- roc_tpr_fpr(roc_infos$curve)
-  store_roc(roc_data, opts$roc_filename)
-}
-if (opts$store_pr) {
-  pr_data <- pr_precision_recall(pr_infos$curve)
-  store_pr(pr_data, opts$pr_filename)
-}
-
-if (opts$plot_roc_image) {
-  plot_curve(roc_infos, opts$roc_image_filename, width = width, height = height)
-}
-if (opts$plot_pr_image) {
-  plot_curve(pr_infos, opts$pr_image_filename, width = width, height = height)
-}
-
 if (opts$jsonify_results) {
   library('rjson')
-  metrics <- list(roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
-  supplementary <- list()
+}
+
+if (opts$motif_fn != "-"){
+  motif_fn <- obtain_and_preprocess_motif(opts)
+
+  pos_scores_fn = tempfile('pos_scores')
+  neg_scores_fn = tempfile('neg_scores')
+
+  system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
+  system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
+
+  pos <- as.matrix(read.table(pos_scores_fn))
+  neg <- as.matrix(read.table(neg_scores_fn))
+  should_calculate_roc <- opts$store_roc || opts$plot_roc_image
+  should_calculate_pr <- opts$store_pr || opts$plot_pr_image
+  roc_infos <- roc.curve(pos, neg, curve=should_calculate_roc)
+  pr_infos <- pr.curve(pos, neg, curve=should_calculate_pr)
+  roc_auc = roc_infos$auc
+  pr_auc = pr_infos$auc.integral
+  pr_auc_dg = pr_infos$auc.davis.goadrich
+
   if (opts$store_roc) {
-    supplementary$roc_curve <- roc_curve_as_points_list(roc_data$tpr, roc_data$fpr)
+    roc_data <- roc_tpr_fpr(roc_infos$curve)
+    store_roc(roc_data, opts$roc_filename)
   }
   if (opts$store_pr) {
-    supplementary$pr_curve  <- pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+    pr_data <- pr_precision_recall(pr_infos$curve)
+    store_pr(pr_data, opts$pr_filename)
   }
-  results <- list(metrics=metrics, supplementary=supplementary)
-  writeLines(toJSON(results))
-} else{
-  writeLines(paste('ROC', as.character(roc_auc)))
-  writeLines(paste('PR', as.character(pr_auc)))
+
+  if (opts$plot_roc_image) {
+    plot_curve(roc_infos, opts$roc_image_filename, width = width, height = height)
+  }
+  if (opts$plot_pr_image) {
+    plot_curve(pr_infos, opts$pr_image_filename, width = width, height = height)
+  }
+
+  if (opts$jsonify_results) {
+    metrics <- list(roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
+    supplementary <- list()
+    if (opts$store_roc) {
+      supplementary$roc_curve <- roc_curve_as_points_list(roc_data$tpr, roc_data$fpr)
+    }
+    if (opts$store_pr) {
+      supplementary$pr_curve  <- pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+    }
+    results <- list(metrics=metrics, supplementary=supplementary)
+    writeLines(toJSON(results))
+  } else{
+    writeLines(paste('ROC', as.character(roc_auc)))
+    writeLines(paste('PR', as.character(pr_auc)))
+  }
+} else {
+  con = file("stdin", "rt")
+  lines <- readLines(con=con, n=-1)
+  for (motif_filename_raw in lines) {
+    motif_fn <- preprocess_motif(motif_filename_raw, opts)
+
+    pos_scores_fn = tempfile('pos_scores')
+    neg_scores_fn = tempfile('neg_scores')
+
+    system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(pos_seq_fn), " > ", shQuote(pos_scores_fn)))
+    system(paste("/app/pwm_scoring -r -u -m ", shQuote(motif_fn), " ", shQuote(neg_seq_fn), " > ", shQuote(neg_scores_fn)))
+
+    pos <- as.matrix(read.table(pos_scores_fn))
+    neg <- as.matrix(read.table(neg_scores_fn))
+    should_calculate_roc <- opts$store_roc || opts$plot_roc_image
+    should_calculate_pr <- opts$store_pr || opts$plot_pr_image
+    roc_infos <- roc.curve(pos, neg, curve=should_calculate_roc)
+    pr_infos <- pr.curve(pos, neg, curve=should_calculate_pr)
+    roc_auc = roc_infos$auc
+    pr_auc = pr_infos$auc.integral
+    pr_auc_dg = pr_infos$auc.davis.goadrich
+
+    if (opts$store_roc) {
+      roc_data <- roc_tpr_fpr(roc_infos$curve)
+      store_roc(roc_data, opts$roc_filename)
+    }
+    if (opts$store_pr) {
+      pr_data <- pr_precision_recall(pr_infos$curve)
+      store_pr(pr_data, opts$pr_filename)
+    }
+
+    if (opts$jsonify_results) {
+      metrics <- list(motif=motif_filename_raw, roc_auc=roc_auc, pr_auc=pr_auc, pr_auc_davis_goadrich=pr_auc_dg)
+      supplementary <- list()
+      if (opts$store_roc) {
+        supplementary$roc_curve <- roc_curve_as_points_list(roc_data$tpr, roc_data$fpr)
+      }
+      if (opts$store_pr) {
+        supplementary$pr_curve  <- pr_curve_as_points_list(pr_data$precision, pr_data$recall)
+      }
+      results <- list(metrics=metrics, supplementary=supplementary)
+      writeLines(toJSON(results))
+    } else{
+      writeLines(paste(motif_filename_raw, 'ROC', as.character(roc_auc)))
+      writeLines(paste(motif_filename_raw, 'PR', as.character(pr_auc)))
+    }
+
+  }
 }
