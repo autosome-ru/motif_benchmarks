@@ -4,15 +4,18 @@ source("/app/pcm2pfm_utils.R")
 obtain_and_preprocess_motif <- function(opts) {
   if (is.na(opts$motif_url) && is.na(opts$motif_fn)) {
     stop("Specify motif file or motif URL.")
-  }
-  else if (!is.na(opts$motif_url) && !is.na(opts$motif_fn)) {
+  } else if (!is.na(opts$motif_url) && !is.na(opts$motif_fn)) {
     stop("You should specify either motif file or motif URL, but not both.")
   } else if (!is.na(opts$motif_url)) {
     motif_filename = download_file(opts$motif_url)
   } else {
     motif_filename = opts$motif_fn
   }
+  pfm_motif_filename = preprocess_motif(motif_filename, opts)
+  return(pfm_motif_filename)
+}
 
+preprocess_motif <- function(motif_filename, opts) {
   motif_format = refine_motif_format_guess(guess_motif_format(motif_filename), opts)
   pfm_motif_filename = get_pfm(motif_filename, motif_format)
   return(pfm_motif_filename)
